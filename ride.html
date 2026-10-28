@@ -1,0 +1,1234 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="theme-color" content="#05080f">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sortie 3D — CycleRush</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Outfit:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#05080f;--panel:rgba(8,16,30,.82);--line:rgba(34,211,238,.28);--fg:#eaf4fb;--muted:#93a9c2;--cyan:#22d3ee;--teal:#2dd4bf;--ink:#04202a;--warn:#fbbf24;--bad:#f87171;
+  --display:"Sora",system-ui,sans-serif;--body:"Outfit",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:var(--body);overflow:hidden}
+[hidden]{display:none!important}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;z-index:2;background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.num{font-variant-numeric:tabular-nums}
+.pw{left:calc(12px + env(safe-area-inset-left,0px));top:calc(12px + env(safe-area-inset-top,0px));padding:10px 14px;min-width:190px}
+.pw .big{font-family:var(--display);font-size:46px;font-weight:700;line-height:1}
+.pw .big small{font-size:16px;color:var(--muted);margin-left:4px}
+.pw .zone{display:inline-block;margin-top:6px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;color:var(--ink);background:var(--cyan)}
+.pw .row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.cell span{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cell b{font-family:var(--display);font-size:18px}
+.top{left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));display:flex;overflow:hidden}
+.top .cell{padding:8px 16px;border-right:1px solid var(--line);text-align:center;min-width:92px}
+.top .cell:last-child{border-right:0}
+.top .cell.hi{background:linear-gradient(135deg,var(--cyan),var(--teal));color:var(--ink)}
+.top .cell.hi span{color:#0b3a44}
+.top .cell b{font-size:22px}
+.slope{right:calc(12px + env(safe-area-inset-right,0px));top:calc(12px + env(safe-area-inset-top,0px));padding:10px 14px;text-align:right;min-width:140px}
+.slope b{font-family:var(--display);font-size:34px;display:block;line-height:1.1}
+.slope .alt{font-size:13px;color:var(--muted)}
+.slope{max-width:250px}.slope .chips{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px 6px;margin-top:6px}.slope .chips .wxchip,.slope .chips .windchip{margin:0}
+@media (max-width:1399px){.wxchip .wl,.windchip .wl{display:none}}
+/* bandeau du haut resserré quand la place manque (voir fitHud) : il ne passe jamais sous le panneau de droite */
+
+.top.tight .cell{padding:6px 9px;min-width:64px}.top.tight .cell b{font-size:17px}.top.tight .cell span{font-size:10px}
+.group{right:calc(12px + env(safe-area-inset-right,0px));top:calc(112px + env(safe-area-inset-top,0px));padding:10px 14px;min-width:180px;font-size:14px}
+.group h3{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}
+#hBots>div{display:flex;justify-content:space-between;gap:12px}
+.prof{left:calc(12px + env(safe-area-inset-left,0px));right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:8px 12px}
+.prof svg{width:100%;height:56px;display:block}
+.prof .lbl{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px}
+.ctrl{left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(100px + env(safe-area-inset-bottom,0px));padding:10px;display:flex;flex-direction:column;gap:8px;max-width:260px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:rgba(19,37,68,.9);color:var(--fg);border-radius:10px;padding:8px 12px;font:600 14px var(--body);cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--cyan)}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--teal));color:var(--ink);border-color:transparent}
+.btn[data-on="1"]{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.btn:disabled{opacity:.5;cursor:default}
+.ctrl .row2{display:flex;gap:6px;flex-wrap:wrap}
+.sens-sum{font-size:12px;color:#9fb3cf;align-self:center;max-width:170px;overflow-wrap:anywhere}
+#bSens[data-on="1"]{border-color:#22d3ee;color:#a5f3fc}
+.box.wide{max-width:860px;max-height:calc(100dvh - 32px);overflow:auto}
+.test{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.test b{color:var(--fg);min-width:52px;text-align:center}
+.msg{font-size:13px;color:var(--warn);margin:0}
+.overlay{position:fixed;inset:0;z-index:5;background:rgba(2,6,14,.78);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.box{background:#0d1a30;border:1px solid var(--line);border-radius:18px;padding:22px;max-width:520px;width:100%;display:flex;flex-direction:column;gap:12px}
+.box h1{font-family:var(--display);margin:0;font-size:26px}
+.box p{margin:0;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats div{background:#132544;border-radius:10px;padding:8px 10px}
+.stats span{display:block;font-size:12px;color:var(--muted)}
+.stats b{font-family:var(--display);font-size:20px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.fly{left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));padding:10px 12px;max-width:min(560px,calc(100vw - 24px));text-align:center}
+.fly b{color:#fbbf24}.fly p{margin:4px 0 8px;font-size:12px;opacity:.85}.fly .pad{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.fly .pad .btn{touch-action:none;user-select:none}
+@media (max-width:640px){.fly{padding:6px 8px;top:calc(118px + env(safe-area-inset-top,0px))}.fly p{display:none}.fly .pad .btn{padding:6px 9px;font-size:12px}#flyPos{font-size:12px}}
+#c.flying{cursor:grab}#c.flying:active{cursor:grabbing}
+.btn[data-fly="1"]{background:#f59e0b;color:#111;border-color:#f59e0b}
+.jx{left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));padding:10px 14px;width:min(520px,calc(100vw - 24px));text-align:center;font-size:14px}
+.jx b{color:#a5f3fc}.jx p{margin:4px 0 8px;color:var(--muted);font-size:13px}.jx .acts{justify-content:center}.jx .btn[data-on="1"]{background:linear-gradient(135deg,var(--cyan),var(--teal));color:var(--ink);border-color:transparent}
+@media (max-width:640px){.jx{top:calc(118px + env(safe-area-inset-top,0px));padding:8px 10px;font-size:13px}.jx p{display:none}}
+.cam{right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(100px + env(safe-area-inset-bottom,0px));padding:6px;display:flex;gap:6px}
+.load{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;text-align:center;
+  background:radial-gradient(700px 420px at 50% 38%,rgba(34,211,238,.16),transparent 70%),radial-gradient(600px 400px at 50% 100%,rgba(45,212,191,.10),transparent 70%),#05080f;transition:opacity .5s}
+.load.out{opacity:0;pointer-events:none}
+.load-logo{display:flex;align-items:center;gap:14px}
+.load-logo svg{width:76px;height:76px;animation:spin 2.4s linear infinite}
+.load-logo b{font-family:var(--display);font-size:clamp(34px,7vw,52px);font-weight:700;letter-spacing:-.02em}
+.load-logo b span{color:var(--cyan)}
+.load-route{color:var(--muted);font-size:17px;margin:0}
+.load-route strong{color:var(--fg);font-weight:600}
+.load-bar{width:min(340px,80vw);height:8px;border-radius:4px;background:#132544;overflow:hidden}
+.load-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--teal));border-radius:4px;transition:width .2s}
+.load-step{color:var(--muted);font-size:14px;margin:0;min-height:1.4em}
+.load-tip{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:16px;right:16px;color:#64799a;font-size:13px;margin:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.load-logo svg{animation:none}}
+@media (max-width:760px){.group{display:none}.top .cell{min-width:70px;padding:6px 8px}.top .cell b{font-size:16px}.pw{min-width:150px}.pw .big{font-size:34px}.slope b{font-size:24px}.slope{min-width:100px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Multijoueur : groupe et étiquettes des autres joueurs */
+.mpbox{right:calc(12px + env(safe-area-inset-right,0px));top:calc(112px + env(safe-area-inset-top,0px));padding:10px 12px;width:min(300px,calc(100vw - 24px));font-size:14px;max-height:calc(100dvh - 260px);overflow:auto}
+.mpbox h3{margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mphead{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:left}
+.mphead .code{font-family:var(--display);font-size:18px;letter-spacing:.14em;color:var(--fg)}
+.mphead .n{margin-left:auto;color:var(--muted);font-size:13px;white-space:nowrap}
+.mpl{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.mpl li{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center}
+.mpl .dot{width:9px;height:9px;border-radius:50%;background:#34d399}.mpl .dot.off{background:#fbbf24}
+.mpl .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mpl .me .nm{color:var(--cyan)}
+.mpl .gap{font-size:13px;color:var(--muted)}.mpl .st{grid-column:2/4;font-size:12px;color:var(--muted);margin-top:-2px}
+.mpnote{margin:8px 0 0;font-size:12px;color:#a5f3fc;min-height:1em}
+.mpnet{margin:6px 0 0;font-size:12px;color:var(--warn)}
+.mpgps{margin:8px 0 0;font-size:11px;color:#7f93ad}
+.mpbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.mpbtns .btn{padding:6px 10px;font-size:13px}
+.tags{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.tag3d{position:absolute;transform:translate(-50%,-100%);padding:2px 8px;border-radius:999px;background:rgba(8,16,30,.78);border:1px solid var(--line);color:var(--fg);font-size:12px;font-weight:600;white-space:nowrap}
+.tag3d.off{opacity:.55}
+@media (max-width:760px){.mpbox{top:calc(146px + env(safe-area-inset-top,0px));font-size:13px;padding:8px 10px}.mpbox.min .mpbody{display:none}}
+
+/* Compteur au guidon (vue cockpit seulement) : écran projeté sur le compteur 3D, en perspective */
+.bikecomp{position:fixed;left:0;top:0;width:220px;height:300px;transform-origin:0 0;pointer-events:none;z-index:1;display:none;box-sizing:border-box;padding:16px 14px;border-radius:14px;background:linear-gradient(180deg,#0d1a2b,#081220);color:#e6f6ff;font-family:var(--display);box-shadow:inset 0 0 0 3px #1c2b3f}
+.bikecomp .bc-h{display:flex;justify-content:space-between;font-size:20px;color:#7dd3fc;letter-spacing:.04em}
+.bikecomp .bc-v{font-size:76px;font-weight:700;line-height:1;margin-top:10px;font-variant-numeric:tabular-nums;color:#f0fbff}
+.bikecomp .bc-u{font-size:22px;color:#8fb4cc;margin-top:-2px}
+.bikecomp .bc-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;font-size:38px;font-weight:700;font-variant-numeric:tabular-nums}
+.bikecomp .bc-row small{font-size:20px;color:#8fb4cc;font-weight:500}
+/* Vent */
+.windchip{display:inline-flex;align-items:center;gap:5px;margin-top:6px;margin-left:6px;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(5,8,15,.35);color:#cfe6f5;font-size:12px}
+.windchip b{font:inherit;font-weight:700;font-size:inherit;display:inline;line-height:inherit}
+.windchip i{display:inline-block;width:14px;height:14px;line-height:14px;text-align:center;font-style:normal;transition:transform .6s}
+@media (max-width:640px){.windchip{padding:2px 7px;font-size:11px}}
+/* Météo et heure */
+.wxchip{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(5,8,15,.35);color:#cfe6f5;font-size:12px;cursor:pointer;font:inherit;font-size:12px}
+.wxchip:hover{border-color:var(--cyan)}
+.wxchip .src{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.02em;padding:1px 6px;border-radius:999px;line-height:14px}
+.wxchip .src.real{background:rgba(34,211,238,.18);color:#67e8f9;border:1px solid rgba(34,211,238,.45)}
+.wxchip .src.alt{background:rgba(251,191,36,.14);color:#fcd34d;border:1px solid rgba(251,191,36,.45)}
+@media (max-width:899px){.wxchip .src{font-size:0;padding:0;width:8px;height:8px;line-height:0;border-width:0}.wxchip .src.real{background:#22d3ee}.wxchip .src.alt{background:#fbbf24}} /* petit écran : simple pastille (cyan = réel, ambre = secours) */
+.wxsrc{display:flex;flex-direction:column;gap:8px;text-align:left}.wxsrc label{display:flex;gap:10px;align-items:flex-start;font-size:15px;cursor:pointer}.wxsrc input{margin-top:3px}
+.wxsrc small{display:block;color:var(--muted);font-size:13px}
+.wxpane{display:flex;flex-direction:column;gap:10px;text-align:left;border:1px solid var(--line);border-radius:14px;padding:12px}
+.wxpane .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.wxpane input[type=search]{flex:1;min-width:0;background:#081325;border:1px solid var(--line);border-radius:10px;color:#e6f6ff;padding:9px 11px;font:inherit}
+.wxpane input[type=search]:focus{outline:2px solid var(--cyan);outline-offset:1px}
+.wxcities{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}.wxcities button{width:100%;text-align:left;background:#0a1629;border:1px solid var(--line);border-radius:10px;color:#e6f6ff;padding:8px 10px;cursor:pointer;font:inherit}
+.wxcities button:hover,.wxcities button:focus{border-color:var(--cyan)}.wxcities small{color:var(--muted)}
+.wxstate{font-size:13px;line-height:1.45;border-radius:10px;padding:8px 10px;margin:0}.wxstate.real{background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.3)}.wxstate.alt{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35)}
+.wxsmall{color:var(--muted);font-size:12px;margin:0}
+.wxask{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:4;width:min(460px,calc(100% - 32px));background:#0d1a30;border:1px solid rgba(34,211,238,.45);border-radius:16px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:8px}
+.wxask b{color:#a5f3fc}
+@media (max-width:700px),(max-height:520px){.wxask{top:8px;transform:translateX(-50%);padding:10px 12px;gap:6px}.wxask>p:first-of-type{display:none}.wxask .acts .btn{padding:6px 10px;font-size:13px}} /* petit écran : en haut, compacte */.wxask p{margin:0;color:var(--muted);font-size:13px}.wxask .acts .btn{padding:7px 12px;font-size:14px}
+@media (max-width:640px){.wxchip .wl{display:none}.wxchip{padding:2px 7px;font-size:11px;margin-top:4px}.slope{display:flex;flex-direction:column;align-items:flex-end}}
+.opts{display:flex;flex-direction:column;gap:12px;text-align:left;margin:12px 0}.opts label{display:flex;gap:10px;align-items:center;font-size:15px}.opts .hint{color:var(--muted);font-size:13px;margin:-6px 0 0 28px}
+/* Segments chronométrés */
+.seg{left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));padding:8px 14px;min-width:min(360px,calc(100vw - 24px));max-width:calc(100vw - 24px);text-align:center;font-size:14px}
+.seg .sn{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--cyan)}
+.seg .st{font-family:var(--display);font-size:28px;font-weight:700;line-height:1.1}
+.seg .sd{color:var(--muted);font-size:13px}.seg .up{color:#34d399}.seg .down{color:#fbbf24}
+.seg .pr{display:inline-block;margin-top:4px;padding:2px 10px;border-radius:999px;background:linear-gradient(135deg,var(--cyan),var(--teal));color:var(--ink);font-weight:700}
+.seg .acts{display:flex;gap:6px;justify-content:center;margin-top:6px}.seg .acts .btn{padding:5px 10px;font-size:13px}
+/* Courses et salons */
+.race{left:50%;transform:translateX(-50%);top:calc(84px + env(safe-area-inset-top,0px));padding:6px 14px;display:flex;gap:14px;align-items:baseline;font-size:14px;white-space:nowrap}
+.race .pos{font-family:var(--display);font-size:24px;font-weight:700;color:var(--cyan)}.race .pos small{font-size:14px;color:var(--muted)}
+.race .gap{color:var(--muted)}
+.count{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:6}
+.count b{font-family:var(--display);font-size:clamp(90px,22vw,200px);color:#fff;text-shadow:0 0 40px rgba(34,211,238,.7),0 4px 0 rgba(0,0,0,.35)}
+.lobby{margin:8px 0 0;padding:8px;border-radius:10px;border:1px dashed rgba(34,211,238,.4);font-size:13px;color:#cfe6f5}
+.lobby .btn{margin-top:6px;width:100%}
+.pend{display:flex;gap:6px;align-items:center;margin-top:6px}.pend span{flex:1;overflow:hidden;text-overflow:ellipsis}.pend .btn{padding:4px 8px;font-size:12px;width:auto;margin:0}
+.mpl .rk{font-family:var(--display);font-weight:700;color:var(--cyan);min-width:1.4em;text-align:right}
+.results table{width:100%;border-collapse:collapse;margin:10px 0;font-size:15px}.results td,.results th{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}.results th{color:var(--muted);font-weight:500;font-size:13px}
+.results .me td{color:var(--cyan);font-weight:600}
+@media (max-width:640px){.race{top:calc(132px + env(safe-area-inset-top,0px));font-size:12px;gap:8px}.race .pos{font-size:18px}.seg{bottom:calc(84px + env(safe-area-inset-bottom,0px));padding:6px 10px}.seg .st{font-size:22px}}
+/* téléphone : bandeau des compteurs sur toute la largeur en haut, puissance et pente juste en dessous (plus rien ne se chevauche) */
+@media (max-width:640px){
+  .top{left:calc(8px + env(safe-area-inset-left,0px));right:calc(8px + env(safe-area-inset-right,0px));transform:none;top:calc(8px + env(safe-area-inset-top,0px))}
+  .top .cell{flex:1 1 0;min-width:0;padding:5px 4px}.top .cell span{font-size:10px;letter-spacing:.03em}.top .cell b{font-size:16px}
+  .pw{top:calc(62px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));min-width:0;width:calc(50% - 12px);box-sizing:border-box;padding:8px 10px}
+  .slope{top:calc(62px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));min-width:0;max-width:none;width:calc(50% - 12px);box-sizing:border-box;padding:8px 10px}
+  .fly,.jx,.race{top:calc(182px + env(safe-area-inset-top,0px))}.mpbox{top:calc(190px + env(safe-area-inset-top,0px))}
+}
+</style>
+</head>
+<body>
+<div class="load" id="load" role="status" aria-live="polite">
+  <div class="load-logo"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="none" stroke="#22d3ee" stroke-width="2.6"/><circle cx="20" cy="20" r="11" fill="none" stroke="#22d3ee" stroke-width="1" opacity=".35"/><path d="M11 12.5l9 16 9-16" fill="none" stroke="#2dd4bf" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Cycle<span>Rush</span></b></div>
+  <p class="load-route" id="loadRoute">Préparation du parcours…</p>
+  <div class="load-bar" aria-hidden="true"><i id="loadBar"></i></div>
+  <p class="load-step" id="loadStep">Chargement du monde 3D</p>
+  <p class="load-tip">Astuce : connecte ton home trainer pour que la résistance suive la pente. Touche C pour changer de caméra.</p>
+</div>
+<canvas id="c" aria-label="Vue 3D de la sortie"></canvas>
+
+<div class="hud pw"><div class="big num" id="hPow">0<small>W</small></div><span class="zone" id="hZone">Z1</span>
+  <div class="row"><div class="cell"><span>W/kg</span><b class="num" id="hWkg">0,0</b></div><div class="cell"><span>Cadence</span><b class="num" id="hCad">—</b></div><div class="cell"><span>FC</span><b class="num" id="hHr">—</b></div></div></div>
+<div class="hud top"><div class="cell hi"><span>km/h</span><b class="num" id="hSpd">0,0</b></div><div class="cell"><span>Distance</span><b class="num" id="hDist">0,00</b></div><div class="cell"><span>D+</span><b class="num" id="hGain">0</b></div><div class="cell"><span>Temps</span><b class="num" id="hTime">0:00</b></div></div>
+<div class="hud slope"><b class="num" id="hSlope">0,0 %</b><span class="alt num" id="hAlt">Altitude 0 m</span><span class="chips"><button class="wxchip" id="hWx" title="Météo et heure (réglages)" aria-label="Météo et heure : réglages">—</button><span class="windchip" id="hWind" title="Vent" aria-live="off"><i aria-hidden="true">↑</i><b class="num" id="hWindV">—</b><span class="wl" id="hWindL"></span></span></span></div>
+<div class="hud race" id="race" hidden aria-live="polite"><span class="pos num" id="rPos">—</span><span id="rGap" class="gap"></span><span id="rLeft" class="num"></span></div>
+<div class="hud seg" id="seg" hidden aria-live="polite"></div>
+<div class="count" id="count" hidden aria-live="assertive"><b id="countN"></b></div>
+<div class="hud group" id="hGroup"><h3>Autour de toi</h3><div id="hBots"></div></div>
+<div class="tags" id="tags" aria-hidden="true"></div>
+<div class="bikecomp" id="bikeComp" aria-hidden="true"><div class="bc-h"><span>CycleRush</span><span id="bcT">0:00</span></div><div class="bc-v" id="bcV">0,0</div><div class="bc-u">km/h</div><div class="bc-row"><span id="bcP">0</span><small>W</small></div><div class="bc-row"><span id="bcD">0,00</span><small>km</small></div></div>
+<div class="hud mpbox" id="mpBox" hidden><h3><button class="mphead" id="mpHead" aria-expanded="true" aria-controls="mpBody"><span id="mpKind">Session</span><span class="code num" id="mpCode">——</span><span class="n" id="mpN"></span></button></h3>
+  <div class="mpbody" id="mpBody"><div id="mpLobby"></div><ul class="mpl" id="mpList"></ul><p class="mpnet" id="mpNet" hidden></p><p class="mpnote" id="mpNote" aria-live="polite"></p>
+  <div class="mpbtns"><button class="btn" id="mpCopy">Copier le code</button><button class="btn" id="mpLeave">Quitter la session</button><button class="btn" id="mpEnd" hidden>Terminer pour tous</button></div>
+  <p class="mpgps">Positions virtuelles sur le parcours : chacun roule chez soi, aucune position GPS n’est utilisée.</p></div></div>
+<div class="hud prof"><div class="lbl"><span id="hRoute">Parcours</span><span id="hLeft">—</span></div><div id="hProf"></div></div>
+
+<div class="hud ctrl">
+  <div class="row2"><button class="btn" id="bSens">Capteurs</button><button class="btn" id="bSound" aria-pressed="true" title="Sons de la nature">Son</button><button class="btn" id="bSpatial" aria-pressed="true" title="Son selon la distance : plus fort quand on s’approche d’une source (vagues, oiseaux, moutons…)">Spatial</button><span class="sens-sum" id="sensSum">Aucun capteur connecté</span></div>
+  <div class="test" id="testRow" hidden><span>Essai sans home trainer :</span><button class="btn" id="pMinus" aria-label="Moins de puissance">−</button><b class="num" id="pTest">0 W</b><button class="btn" id="pPlus" aria-label="Plus de puissance">+</button></div>
+  <p class="msg" id="msg" hidden></p>
+  <div class="row2"><button class="btn primary" id="bGo">Démarrer</button><button class="btn" id="bEnd" disabled>Terminer</button><a class="btn" id="bBack" href="./#liste-parcours">Quitter</a></div>
+</div>
+<div class="hud cam" role="group" aria-label="Caméra"><button class="btn" data-cam="chase" data-on="1">Poursuite</button><button class="btn" data-cam="cockpit">Cockpit</button><button class="btn" data-cam="drone">Drone</button><button class="btn" id="bFly" hidden title="Réservé au super-administrateur">Vol libre</button></div>
+<div class="hud jx" id="jx" hidden aria-live="polite"><div id="jxT"></div><p id="jxP"></p><div class="acts" id="jxA"><button class="btn" id="jxTurn"></button><button class="btn" id="jxStraight">Tout droit</button></div></div>
+<div class="hud fly" id="flyHud" hidden><b>Mode vol</b> · <span id="flyPos"></span><p>ZQSD ou flèches : se déplacer · Espace : monter · Maj : descendre · glisser : regarder · molette : vitesse. La sortie est en pause.</p><div class="pad"><button class="btn" data-hold="f">Avancer</button><button class="btn" data-hold="b">Reculer</button><button class="btn" data-hold="u">Monter</button><button class="btn" data-hold="d">Descendre</button><button class="btn" id="flySpd">Vitesse ×1</button><button class="btn primary" id="flyExit">Revenir au cycliste</button></div></div>
+
+<div class="overlay" id="sum" hidden><div class="box" role="dialog" aria-labelledby="sumT"><h1 id="sumT">Sortie terminée</h1><p id="sumSub"></p><div class="stats" id="sumStats"></div><p id="saveTxt"></p>
+  <div class="acts"><button class="btn primary" id="bSave">Enregistrer dans CycleRush</button><button class="btn" id="bRetry" hidden>Recommencer depuis le départ</button><a class="btn" href="./" id="bDash">Tableau de bord</a><button class="btn" id="bClose">Reprendre la route</button><a class="btn" id="bQuit2" href="./#liste-parcours">Quitter</a></div></div></div>
+<div class="overlay" id="sens" hidden><div class="box wide" role="dialog" aria-labelledby="sensT"><h1 id="sensT">Capteurs</h1><p>Connecte ton home trainer, ton cardio, ton capteur de cadence et ton capteur de puissance. S’il y en a plusieurs, le capteur de puissance et le capteur de cadence sont prioritaires sur le home trainer.</p><div id="sensPanel"></div><div class="acts"><button class="btn primary" id="sensClose">Fermer</button></div></div></div>
+<div class="overlay" id="wxo" hidden><div class="box" role="dialog" aria-labelledby="wxT"><h1 id="wxT">Météo et heure</h1>
+  <p id="wxNow" class="wxstate"></p>
+  <div class="wxsrc" role="radiogroup" aria-label="Source du ciel">
+    <label><input type="radio" name="wxs" id="sReal" value="real"><span>Météo et heure réelles<small>Le ciel, la lumière, la pluie et le vent suivent les conditions réelles de ton lieu.</small></span></label>
+    <label><input type="radio" name="wxs" id="sGame" value="game"><span>Ciel du jeu<small>Cycle jour / nuit de 40 min et météo du parcours, les mêmes pour tous les cyclistes.</small></span></label>
+  </div>
+  <div class="wxpane" id="wxReal">
+    <p id="wxLoc" style="margin:0"></p>
+    <div class="row"><button class="btn primary" id="wxGps" type="button">📍 Utiliser ma position</button><button class="btn" id="wxRetry" type="button" hidden>Réessayer maintenant</button></div>
+    <label for="wxCity" class="wxsmall">Ou choisis une ville :</label>
+    <div class="row"><input type="search" id="wxCity" placeholder="Ex. Lyon, Bruxelles, Montréal…" autocomplete="off" maxlength="80"><button class="btn" id="wxFind" type="button">Chercher</button></div>
+    <ul class="wxcities" id="wxCities" aria-live="polite"></ul>
+    <p class="wxsmall" id="wxPriv">Ta position n’est utilisée qu’avec ton accord. Elle est arrondie à environ 1 km et enregistrée sur cet appareil uniquement ; seules ces coordonnées arrondies sont envoyées au service météo. Données météo : <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" style="color:#67e8f9">Open-Meteo.com</a> (CC BY 4.0).</p>
+  </div>
+  <div class="opts" id="wxGame"><label><input type="checkbox" id="oCycle"> Cycle jour / nuit</label><p class="hint">Jour, coucher, nuit et lever du soleil se succèdent (40 min). Décoché : toujours le jour.</p>
+  <label><input type="checkbox" id="oWx"> Météo dynamique</label><p class="hint">Nuages, brouillard et pluie selon le climat du parcours, les mêmes pour tous les cyclistes. Décoché : toujours beau.</p></div>
+  <div class="opts" style="margin:0"><label><input type="checkbox" id="oLow"> Mode économie (appareils peu puissants)</label><p class="hint">Résolution réduite, sans herbe haute, moins de gouttes de pluie, de flocons et de nuages. La résolution baisse aussi d’elle-même si l’appareil ralentit.</p></div>
+  <p class="hint" style="margin:0;color:var(--muted);font-size:13px">Réglages enregistrés sur cet appareil.</p><div class="acts"><button class="btn primary" id="wxClose">Fermer</button></div></div></div>
+<div class="wxask" id="wxAsk" role="dialog" aria-labelledby="wxAskT" hidden><b id="wxAskT">Météo et heure réelles</b><p>Pour que le ciel, la nuit et la pluie suivent ceux de dehors, CycleRush a besoin de savoir où tu es. Rien n’est utilisé sans ton accord.</p>
+  <div class="acts"><button class="btn primary" id="wxAskGps" type="button">📍 Utiliser ma position</button><button class="btn" id="wxAskCity" type="button">Choisir une ville</button><button class="btn" id="wxAskLater" type="button">Plus tard</button></div><p id="wxAskErr" role="alert"></p></div>
+<div class="overlay" id="rres" hidden><div class="box wide results" role="dialog" aria-labelledby="rresT"><h1 id="rresT">Résultats de la course</h1><p id="rresSub"></p><div id="rresBody"></div>
+  <div class="acts"><button class="btn primary" id="rresClose">Fermer</button><a class="btn" href="./#ensemble">Rouler ensemble</a></div></div></div>
+<div class="overlay" id="off" hidden><div class="box"><h1>Parcours indisponible</h1><p id="offTxt"></p><div class="acts"><a class="btn primary" href="./#liste-parcours">Choisir un autre parcours</a></div></div></div>
+<div class="overlay" id="err" hidden><div class="box"><h1>Impossible d’afficher la 3D</h1><p id="errTxt"></p><div class="acts"><a class="btn primary" href="./#liste-parcours">Retour aux parcours</a></div></div></div>
+
+<script src="world/telemetry.js"></script>
+<script src="demo-api.js"></script>
+<script src="world/vv3d.js"></script>
+<script src="world/rider.js"></script>
+<script src="world/world.js"></script>
+<script src="world/life.js"></script>
+<script src="world/realwx.js"></script>
+<script src="world/sky.js"></script>
+<script src="world/sensors.js"></script>
+<script src="world/ambience.js"></script>
+<script src="world/prefs.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const nf = (n, d = 0) => Number(n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const fmt = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+  const pageT0 = performance.now();
+  const route = VVWorld.byId((location.hash || '').slice(1)) || VVWorld.ROUTES[0];
+  const T = window.VVTelemetry || { setRoute() {}, report() {}, loaded() {} };
+  T.setRoute(route.id);
+  // état du parcours (activé ou désactivé par l'équipe), lu sur le serveur
+  const statusReady = fetch('/api/routes/status', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).then(d => d && d.routes.find(x => x.id === route.id)).catch(() => null);
+  $('loadRoute').innerHTML = 'Parcours <strong></strong> · ' + route.km + ' km'; $('loadRoute').querySelector('strong').textContent = route.name;
+  const loadStep = (pct, txt) => { $('loadBar').style.width = pct + '%'; if (txt) $('loadStep').textContent = txt; };
+  const { M } = VV3D;
+  let R;
+  try { R = new VV3D.Renderer($('c')); } catch (e) { T.report('webgl', 'Rendu 3D impossible : ' + e.message, { stack: String(e.stack || '') }, 'critical'); $('load').hidden = true; $('errTxt').textContent = e.message; $('err').hidden = false; return; }
+  $('c').addEventListener('webglcontextlost', () => T.report('webgl', 'Contexte WebGL perdu pendant la sortie', {}, 'error'));
+  document.title = route.name + ' — CycleRush';
+  $('hRoute').textContent = route.name + ' · ' + route.km + ' km';
+  $('bBack').href = './#p-' + route.id; $('bQuit2').href = $('bBack').href;
+
+  /* ---------- État de la sortie ---------- */
+  // tracé, relief et décor : une erreur ici est un incident de terrain ou de données du parcours
+  let W, scene, BRS;
+  try { W = VVWorld.build(route); }
+  catch (e) { T.report('route', 'Tracé du parcours impossible à construire : ' + e.message, { stack: String(e.stack || '') }, 'critical'); $('load').hidden = true; $('errTxt').textContent = 'Le tracé du parcours n’a pas pu être construit.'; $('err').hidden = false; return; }
+  if (!(W.length > 0) || [...W.E].some(v => !Number.isFinite(v))) T.report('route', 'Profil d’altitude invalide (valeurs non numériques)', { length: W.length || 0 }, 'critical');
+  else if (Math.abs(W.length / 1000 - route.km) / route.km > 0.1) T.report('route', `Longueur du tracé (${(W.length / 1000).toFixed(1)} km) différente de la longueur annoncée (${route.km} km)`, { lengthM: Math.round(W.length), km: route.km }, 'warning');
+  const S = { road: -1, u: 0, dist: 0, turn: {}, laneOff: 0, lastBr: null, running: false, paused: false, s: 0, v: 0, t: 0, gain: 0, startedAt: null, test: 0, power: 0, cad: 0, hr: 0, rec: [], cam: 'chase', ftp: 250, kg: 75, saved: false, done: false };
+  try { const f = JSON.parse(localStorage.getItem('vsht_ftp')); if (f) S.ftp = f; const k = JSON.parse(localStorage.getItem('vsht_kg')); if (k) S.kg = k; } catch {}
+  try { scene = new VVWorld.Scenery(R, route, { worker: 'world/scenery-worker.js' }); } // décor construit en arrière-plan (Web Worker)
+  catch (e) { T.report('terrain', 'Environnement 3D impossible à construire : ' + e.message, { stack: String(e.stack || '') }, 'critical'); $('load').hidden = true; $('errTxt').textContent = 'Le décor du parcours n’a pas pu être construit.'; $('err').hidden = false; return; }
+  /* ---------- Routes secondaires ----------
+     À l'approche d'un embranchement, un panneau propose de prendre la route secondaire (flèche ← ou →, ou bouton) ;
+     par défaut on continue tout droit. Sur la route secondaire, position, pente, résistance du home trainer et
+     profil sont ceux de cette route ; à son bout, on retrouve la route principale plus loin. */
+  try { BRS = VVWorld.branchesOf(W); } catch (e) { BRS = []; T.report('route', 'Routes secondaires impossibles à construire : ' + e.message, { stack: String(e.stack || '') }, 'error'); }
+  const curRoad = () => S.road >= 0 ? BRS[S.road].road : W;
+  // Vie du parcours : trains et passages à niveau, vaches et chevaux, voitures, vent (world/life.js)
+  let life = null; try { life = window.VVLife && new URLSearchParams(location.search).get('life') !== '0' ? VVLife.create(R, scene, { theme: route.theme }) : null; } catch (e) { life = null; T.report('terrain', 'Animations du parcours (trains, animaux, voitures) indisponibles : ' + e.message, { stack: String(e.stack || '') }, 'warning'); }
+  window.__vvLife = () => life; // tests
+  const curPos = () => S.road >= 0 ? S.u : S.s;
+  const laneMain = () => myLane;
+  const laneBranch = () => Math.max(-1.1, Math.min(1.1, myLane)) * 0.8;
+  // garde la position à l'écran au moment du changement de route (pas de saut de côté)
+  function keepLane(from) {
+    const q = VVWorld.atSmooth(curRoad(), curPos()), nx = -Math.sin(q.heading), nz = Math.cos(q.heading);
+    const base = (S.road >= 0 ? laneBranch() : laneMain()), off = (from.x - q.x) * nx + (from.z - q.z) * nz;
+    S.laneOff = Math.max(-4, Math.min(4, off - base));
+  }
+  const JX = { next: null };
+  const km1 = m => nf(m / 1000, 1);
+  function jxUi() {
+    const box = $('jx');
+    if (F.on) { box.hidden = true; return; }
+    if (S.road >= 0) {
+      const b = BRS[S.road]; JX.next = null; box.hidden = false; $('jxA').hidden = true;
+      $('jxT').innerHTML = 'Tu roules sur <b></b>'; $('jxT').querySelector('b').textContent = b.name;
+      $('jxP').textContent = b.kind + ' · ' + km1(Math.max(0, b.len - S.u)) + ' km avant de rejoindre la route principale (km ' + km1(b.sB) + ')';
+      $('hRoute').textContent = b.name + ' · ' + km1(b.len) + ' km';
+      return;
+    }
+    $('hRoute').textContent = route.name + ' · ' + route.km + ' km';
+    const b = BRS.find(x => x.sA > S.s && x.sA - S.s < 320);
+    JX.next = b || null;
+    if (!b) { box.hidden = true; return; }
+    box.hidden = false; $('jxA').hidden = false;
+    const on = !!S.turn[b.id], arrow = b.side < 0 ? '←' : '→';
+    $('jxT').innerHTML = 'Embranchement dans <b class="num"></b> m'; $('jxT').querySelector('b').textContent = Math.max(0, Math.round(b.sA - S.s));
+    $('jxP').textContent = arrow + ' ' + b.name + ' — ' + b.kind.toLowerCase() + ', ' + km1(b.len) + ' km, D+ ' + b.dplus + ' m, rejoint la route au km ' + km1(b.sB);
+    $('jxTurn').textContent = arrow + ' ' + b.name; $('jxTurn').dataset.on = on ? '1' : ''; $('jxTurn').setAttribute('aria-pressed', on ? 'true' : 'false');
+    $('jxStraight').textContent = 'Tout droit ' + (b.side < 0 ? '→' : '←'); $('jxStraight').dataset.on = on ? '' : '1'; $('jxStraight').setAttribute('aria-pressed', on ? 'false' : 'true');
+  }
+  $('jxTurn').onclick = () => { if (JX.next) { S.turn[JX.next.id] = true; jxUi(); } };
+  $('jxStraight').onclick = () => { if (JX.next) { S.turn[JX.next.id] = false; jxUi(); } };
+  let me = null, user = null;
+  const meReady = fetch('/api/auth/me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).then(d => { user = d && d.user; me && me.set({ rider: user && user.rider || undefined, bike: user && user.bike || undefined }); $('bFly').hidden = !(user && user.role === 'superadmin'); }).catch(() => {});
+  me = new VVRider.Model(R, {});
+  const bots = [{ name: 'Bot Léa', w: 205, off: 1.5 }, { name: 'Bot Malo', w: 185, off: 0.15 }, { name: 'Bot Inès', w: 230, off: 1.15 }] /* tous sur la moitié droite de la route : les voitures peuvent croiser et doubler */.map((b, i) => ({ ...b, s: 8 + i * 6, v: 0, model: new VVRider.Model(R, VVRider.randomCfg(VV3D.rng(route.seed * 7 + i))) }));
+
+  /* ---------- Capteurs (module partagé world/sensors.js) ---------- */
+  const SX = window.VVSensors;
+  const samples = [];
+  const pushPower = w => { samples.push({ t: performance.now(), w: Math.max(0, w) }); while (samples.length && performance.now() - samples[0].t > 5000) samples.shift(); };
+  const avgP = sec => { const n = performance.now(); let a = 0, c = 0; for (const x of samples) if (n - x.t <= sec * 1000) { a += x.w; c++; } return c ? a / c : 0; };
+  let lastGrade = null, lastGradeAt = 0, lastPush = 0;
+  const say = t => { $('msg').textContent = t || ''; $('msg').hidden = !t; };
+  const realPower = () => SX.powerConnected();
+  const sensSummary = () => {
+    const on = Object.keys(SX.KINDS).filter(k => SX.state[k].status === 'on');
+    $('bSens').dataset.on = on.length ? '1' : '';
+    $('bSens').textContent = on.length ? 'Capteurs (' + on.length + ')' : 'Capteurs';
+    $('sensSum').textContent = on.length ? on.map(k => SX.KINDS[k].label).join(' · ') : 'Aucun capteur connecté';
+    $('testRow').hidden = realPower() || !canTest();
+  };
+  SX.on(t => { if (t === 'state') { sensSummary(); if (SX.state.trainer.status !== 'on') lastGrade = null; } });
+  SX.mountPanel($('sensPanel'));
+  /* ---------- Sons de la nature ---------- */
+  const amb = VVAmbience.create(route.theme);
+  const soundUi = () => {
+    $('bSound').textContent = amb.on ? '🔊 Son' : '🔇 Son coupé'; $('bSound').setAttribute('aria-pressed', amb.on ? 'true' : 'false'); $('bSound').dataset.on = amb.on ? '1' : '';
+    $('bSpatial').textContent = amb.spatial ? '🎧 Spatial' : '🎧 Spatial coupé'; $('bSpatial').setAttribute('aria-pressed', amb.spatial ? 'true' : 'false'); $('bSpatial').dataset.on = amb.spatial ? '1' : ''; $('bSpatial').disabled = !amb.on;
+  };
+  if (!amb.supported) { $('bSound').hidden = true; $('bSpatial').hidden = true; }
+  soundUi();
+  $('bSound').onclick = () => { amb.setOn(!amb.on); soundUi(); VVPrefs.set('sound', amb.on); };
+  $('bSpatial').onclick = () => { amb.setSpatial(!amb.spatial); soundUi(); VVPrefs.set('spatial', amb.spatial); };
+  // réglages du compte (FTP, poids, son) : les mêmes sur tous les appareils
+  meReady.then(() => {
+    const pf = VVPrefs.sync(user);
+    if (pf.ftp) S.ftp = pf.ftp; if (pf.kg) S.kg = pf.kg;
+    if (amb.supported && pf.spatial !== undefined && pf.spatial !== amb.spatial) amb.setSpatial(pf.spatial);
+    if (amb.supported && pf.sound !== undefined && pf.sound !== amb.on) amb.setOn(pf.sound);
+    soundUi();
+  });
+  // Autorisation du son : les navigateurs n'autorisent l'audio qu'après un geste (clic, touche).
+  // On réessaie à chaque geste tant que le son est bloqué, et on le signale discrètement.
+  const unlock = () => {
+    if (!amb.on) return;
+    amb.start();
+    if (amb.supported && amb.state === 'none') T.report('audio', 'Le son n’a pas pu démarrer (contexte audio impossible à créer)', {}, 'warning');
+    setTimeout(() => { if (amb.state === 'running') { removeEventListener('pointerdown', unlock, true); removeEventListener('keydown', unlock, true); if ($('msg').dataset.audio) { say(''); delete $('msg').dataset.audio; } }
+      else if (amb.state === 'suspended') { say('Le son est bloqué par le navigateur : touche l’écran ou appuie sur une touche pour l’activer.'); $('msg').dataset.audio = '1'; } }, 300);
+  };
+  addEventListener('pointerdown', unlock, true); addEventListener('keydown', unlock, true);
+  $('bSens').onclick = () => { $('sens').hidden = false; $('sensClose').focus(); };
+  $('sensClose').onclick = () => { $('sens').hidden = true; $('bSens').focus(); };
+  // Essai sans home trainer : réservé à l'équipe de modération et d'administration (pour tester les parcours).
+  // Une puissance d'essai n'est jamais mesurée : elle ne rapporte ni pièces ni XP (vérifié par le serveur).
+  function canTest() { return !!user && Array.isArray(user.permissions) && user.permissions.includes('admin.access'); }
+  meReady.then(() => { if (!canTest()) { S.test = 0; $('pTest').textContent = '0 W'; } sensSummary();
+    // équipe : départ à un kilomètre donné (?km=12.5) pour vérifier une portion du parcours sans tout rouler
+    const km = parseFloat(new URLSearchParams(location.search).get('km'));
+    if (canTest() && km > 0 && !S.running && !MPS.code) { S.s = Math.min(W.length - 50, km * 1000); say('Départ au km ' + nf(S.s / 1000, 1) + ' (réservé à l’équipe).'); }
+  });
+  $('pMinus').onclick = () => { S.test = Math.max(0, S.test - 20); $('pTest').textContent = S.test + ' W'; };
+  $('pPlus').onclick = () => { if (!canTest()) return; S.test = Math.min(1200, S.test + 20); $('pTest').textContent = S.test + ' W'; say(''); };
+  addEventListener('keydown', e => {
+    if (F.on) { if (FLYKEYS[e.code]) { F.keys.add(FLYKEYS[e.code]); e.preventDefault(); } else if (e.key === 'Escape') flyOff(); return; }
+    if (e.key === 'ArrowUp' && canTest()) $('pPlus').click(); else if (e.key === 'ArrowDown' && canTest()) $('pMinus').click();
+    else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !$('jx').hidden && JX.next) { const want = (e.key === 'ArrowLeft' ? -1 : 1) === JX.next.side; S.turn[JX.next.id] = want; jxUi(); }
+    else if (e.key === 'c' || e.key === 'C') { const order = ['chase', 'cockpit', 'drone']; setCam(order[(order.indexOf(S.cam) + 1) % 3]); }
+    else if (e.code === 'Space' && $('sum').hidden) { e.preventDefault(); $('bGo').click(); }
+  });
+  const setCam = c => { S.cam = c; document.querySelectorAll('[data-cam]').forEach(b => b.dataset.on = b.dataset.cam === c ? '1' : ''); };
+  document.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => setCam(b.dataset.cam));
+
+  /* ---------- Vol libre (super-administrateur uniquement) ----------
+     Ne modifie aucune donnée : seule la caméra bouge, la sortie est en pause et le bouton Démarrer est bloqué pendant le vol. */
+  const F = { on: false, x: 0, y: 0, z: 0, yaw: 0, pitch: -0.2, mult: 1, keys: new Set(), near: 0, nearAt: 0 };
+  window.__vvFly = () => F; // tests (vol libre réservé à l'équipe)
+  const FLYKEYS = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', Space: 'u', KeyE: 'u', ShiftLeft: 'd', ShiftRight: 'd' };
+  const SPEEDS = [1, 3, 8, 20];
+  addEventListener('keyup', e => { if (FLYKEYS[e.code]) F.keys.delete(FLYKEYS[e.code]); });
+  addEventListener('blur', () => F.keys.clear());
+  const canFly = () => !!user && user.role === 'superadmin';
+  const nearestS = (x, z) => { let best = 0, d = Infinity; for (let i = 0; i < W.n; i += 2) { const dx = W.X[i] - x, dz = W.Z[i] - z, q = dx * dx + dz * dz; if (q < d) { d = q; best = i; } } return { s: best * VVWorld.STEP, d: Math.sqrt(d) }; };
+  function flyOn() {
+    if (!canFly() || F.on) return;
+    const p = VVWorld.at(W, S.s), b = VVWorld.at(W, Math.max(0, S.s - 20));
+    if (S.running && !S.paused) $('bGo').click();
+    F.x = b.x; F.y = p.y + 12; F.z = b.z; F.yaw = p.heading; F.pitch = -0.25; F.near = S.s; F.on = true;
+    $('bGo').disabled = true; $('bFly').dataset.fly = '1'; $('flyHud').hidden = false; $('c').classList.add('flying');
+  }
+  function flyOff() {
+    if (!F.on) return; F.on = false; F.keys.clear();
+    $('bGo').disabled = false; $('bFly').dataset.fly = ''; $('flyHud').hidden = true; $('c').classList.remove('flying');
+  }
+  $('bFly').onclick = () => F.on ? flyOff() : flyOn();
+  $('flyExit').onclick = flyOff;
+  $('flySpd').onclick = () => { F.mult = SPEEDS[(SPEEDS.indexOf(F.mult) + 1) % SPEEDS.length]; $('flySpd').textContent = 'Vitesse ×' + F.mult; };
+  document.querySelectorAll('[data-hold]').forEach(b => {
+    const k = b.dataset.hold;
+    b.addEventListener('pointerdown', e => { e.preventDefault(); F.keys.add(k); b.setPointerCapture && b.setPointerCapture(e.pointerId); });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, () => F.keys.delete(k));
+  });
+  { let drag = null; const cv = $('c');
+    cv.addEventListener('pointerdown', e => { if (F.on) { drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); } });
+    cv.addEventListener('pointermove', e => { if (!drag || !F.on) return; F.yaw += (e.clientX - drag.x) * 0.005; F.pitch = Math.max(-1.45, Math.min(1.45, F.pitch - (e.clientY - drag.y) * 0.005)); drag = { x: e.clientX, y: e.clientY }; });
+    for (const ev of ['pointerup', 'pointercancel']) cv.addEventListener(ev, () => { drag = null; });
+    cv.addEventListener('wheel', e => { if (!F.on) return; e.preventDefault(); const i = SPEEDS.indexOf(F.mult) + (e.deltaY < 0 ? 1 : -1); F.mult = SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, i))]; $('flySpd').textContent = 'Vitesse ×' + F.mult; }, { passive: false });
+  }
+  function flyStep(dt, now) {
+    const K = F.keys, sp = 15 * F.mult, fx = Math.cos(F.yaw), fz = Math.sin(F.yaw), rx = -fz, rz = fx;
+    const f = (K.has('f') ? 1 : 0) - (K.has('b') ? 1 : 0), r = (K.has('r') ? 1 : 0) - (K.has('l') ? 1 : 0), u = (K.has('u') ? 1 : 0) - (K.has('d') ? 1 : 0);
+    F.x += (fx * f + rx * r) * sp * dt; F.z += (fz * f + rz * r) * sp * dt; F.y += u * sp * dt;
+    if (now - F.nearAt > 150) { F.nearAt = now; const n = nearestS(F.x, F.z); F.near = n.s; F.dist = n.d; }
+    F.y = Math.max(VVWorld.at(W, F.near).y + (F.dist < 8 ? 1.2 : 0.5), Math.min(4000, F.y));
+    $('flyPos').textContent = 'km ' + nf(F.near / 1000, 1) + ' · ' + Math.round(F.dist) + ' m de la route · altitude ' + Math.round(F.y) + ' m';
+    const cp = Math.cos(F.pitch);
+    return { eye: [F.x, F.y, F.z], look: [F.x + Math.cos(F.yaw) * cp * 10, F.y + Math.sin(F.pitch) * 10, F.z + Math.sin(F.yaw) * cp * 10] };
+  }
+
+  /* ---------- Suivi de la sortie par le serveur ----------
+     Les pièces et l'XP ne sont accordées qu'à une sortie suivie en direct : session ouverte au démarrage,
+     signe de vie toutes les 20 s (temps, distance, puissance mesurée), puis enregistrement unique de cette session. */
+  const RS = { id: null, starting: null, lastRec: 0, err: '', timer: null };
+  const post = (path, body) => fetch('/api' + path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-veloverse': '1' }, body: JSON.stringify(body) })
+    .then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Le serveur n’a pas répondu.'); return d; });
+  const powerSince = () => { const R = S.rec.slice(RS.lastRec); RS.lastRec = S.rec.length; return R.length ? Math.round(R.reduce((a, x) => a + x.p, 0) / R.length) : 0; };
+  const beat = () => { if (!RS.id || S.saved || RS.err) return; post('/rides/' + RS.id + '/beat', { elapsedS: Math.floor(S.t), distanceM: Math.floor(S.dist), avgPower: powerSince(), measured: realPower() }).catch(e => { RS.err = e.message; }); };
+  function startTracking() {
+    if (!user || RS.id || RS.starting) return;
+    RS.starting = post('/rides/start', { kind: 'route', routeId: route.id })
+      .then(d => { RS.id = d.id; RS.timer = setInterval(beat, (d.beatEveryS || 20) * 1000); })
+      .catch(e => { RS.err = e.message; }).finally(() => { RS.starting = null; });
+  }
+  $('bGo').onclick = () => {
+    if (F.on) return;
+    if (locked()) { say(MPS.sess.phase === 'countdown' ? 'Départ dans quelques secondes…' : MPS.host ? 'Lance d’abord le départ pour tout le monde (bouton dans la session).' : 'Attends le départ donné par l’organisateur.'); return; }
+    if (!S.running) startTracking();
+    if (!S.running && !realPower() && S.test <= 0) say('Tu n’avances qu’en pédalant : connecte ton home trainer ou ton capteur de puissance (bouton Capteurs)' + (canTest() ? ', ou règle la puissance d’essai avec + (ou la flèche ↑).' : '.'));
+    if (!S.running) { S.running = true; S.startedAt = S.startedAt || new Date().toISOString(); $('bEnd').disabled = false; try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch {} }
+    else { S.paused = !S.paused; if (S.paused) segCancel('pause pendant le segment'); }
+    $('bGo').textContent = S.running && !S.paused ? 'Pause' : 'Reprendre';
+    mpKick();
+  };
+  $('bEnd').onclick = () => finish();
+
+  /* ---------- Multijoueur : rouler ensemble avec un code ----------
+     Environ une fois par seconde, on envoie au serveur sa position VIRTUELLE sur le parcours (distance, vitesse, état)
+     et on reçoit celle des autres participants. Chaque autre joueur est affiché avec un léger retard (1,2 s) en
+     interpolant entre les positions reçues : le mouvement reste fluide malgré le réseau, sans téléportation.
+     Aucune position GPS n'est utilisée : chacun roule chez soi, tout le monde se retrouve sur le même tracé. */
+  const LANES = [0.8, -0.8, 1.9, -1.9, 0, 2.8, -2.8, 1.35];
+  const MP_DELAY = 1200;
+  const MPS = { code: (new URLSearchParams(location.search).get('session') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6), on: false, host: false, slot: 0,
+    players: new Map(), offset: null, epoch: 'e' + Math.random().toString(36).slice(2, 10), timer: null, busy: false, fails: 0, needLooks: true, first: true, min: matchMedia('(max-width:760px)').matches };
+  let myLane = 0.8;
+  const mpApi = (method, path, body) => fetch('/api' + path, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-veloverse': '1' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    .then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(d.error || 'Le serveur n’a pas répondu.'), { status: r.status, code: d.code }); return d; });
+  const mpState = () => !S.running ? 'waiting' : S.road < 0 && S.s >= W.length - 1 ? 'finished' : S.paused ? 'paused' : 'riding';
+  let noteTimer = null;
+  const mpNote = t => { $('mpNote').textContent = t; clearTimeout(noteTimer); noteTimer = setTimeout(() => { $('mpNote').textContent = ''; }, 6000); };
+  const STATE_TXT = { waiting: 'attend le départ', riding: 'roule', paused: 'est en pause', finished: 'est arrivé' };
+
+  function mpApply(d, sentAt, recvAt) {
+    const off = d.now - (sentAt + recvAt) / 2; // décalage entre l'horloge du serveur et celle de l'appareil
+    MPS.offset = MPS.offset === null ? off : MPS.offset + (off - MPS.offset) * 0.2;
+    const was = MPS.sess; MPS.sess = d.session || MPS.sess; MPS.pending = d.pending || []; MPS.list = d.players;
+    if (was && MPS.sess && was.phase !== MPS.sess.phase) mpPhase(was.phase, MPS.sess.phase);
+    const seen = new Set();
+    for (const p of d.players) {
+      if (p.me) { MPS.slot = p.slot; MPS.host = p.host; MPS.meP = p; myLane = LANES[p.slot % LANES.length]; continue; }
+      if (p.gone) continue; // coureur parti (abandon) : seulement dans le classement
+      seen.add(p.id);
+      let o = MPS.players.get(p.id);
+      if (!o) { o = { id: p.id, buf: [], ds: null, model: null, tag: null }; MPS.players.set(p.id, o); if (!MPS.first) mpNote(p.username + ' a rejoint la session'); }
+      else if (o.state !== p.state) mpNote(p.username + ' ' + STATE_TXT[p.state]);
+      else if (o.connected && !p.connected) mpNote(p.username + ' a perdu la connexion');
+      else if (!o.connected && p.connected) mpNote(p.username + ' est reconnecté');
+      if (p.rider && !o.model) o.model = new VVRider.Model(R, { rider: p.rider, bike: p.bike });
+      if (!o.model) MPS.needLooks = true;
+      Object.assign(o, { username: p.username, slot: p.slot, state: p.state, stateLabel: p.stateLabel, connected: p.connected, host: p.host });
+      const last = o.buf[o.buf.length - 1];
+      if (!last || p.at > last.t) { const rd = Number.isInteger(p.road) && p.road >= 0 && p.road < BRS.length ? p.road : -1; o.buf.push({ t: p.at, s: p.s, v: p.state === 'riding' ? p.v : 0, road: rd, pos: rd >= 0 ? (p.u || 0) : p.s }); if (o.buf.length > 30) o.buf.shift(); }
+    }
+    for (const [id, o] of MPS.players) if (!seen.has(id)) { mpNote(o.username + ' a quitté la session'); o.model && o.model.dispose(); o.tag && o.tag.remove(); MPS.players.delete(id); }
+    MPS.first = false;
+    mpPanel();
+  }
+  function mpSchedule(ms) { clearTimeout(MPS.timer); if (MPS.on) MPS.timer = setTimeout(mpTick, ms); }
+  async function mpTick() {
+    if (!MPS.on) return;
+    if (MPS.busy) return mpSchedule(300);
+    MPS.busy = true;
+    const t0 = Date.now();
+    let wait = mpState() === 'riding' ? 1000 : 2500;
+    try {
+      // vitesse réellement parcourue depuis le dernier envoi (et non la vitesse du modèle physique) : sur un appareil lent
+      // (peu d'images par seconde), le cycliste avance moins vite que sa vitesse affichée ; le serveur prolonge la position
+      // de chacun avec cette vitesse pour un classement au même instant, qui doit donc être la vraie progression
+      const tNow = performance.now(), L0 = MPS.lastTick; let vEff = S.v;
+      if (L0 && S.road < 0 && L0.road < 0 && tNow - L0.t > 300 && tNow - L0.t < 10000) vEff = Math.max(0, Math.min(S.v * 1.2 + 0.5, (S.s - L0.s) / ((tNow - L0.t) / 1000)));
+      MPS.lastTick = { t: tNow, s: S.s, road: S.road };
+      const d = await mpApi('POST', '/mp/sessions/' + MPS.code + '/tick', { state: mpState(), s: Math.round(S.s * 10) / 10, v: Math.round(vEff * 100) / 100, road: S.road, u: Math.round(S.u * 10) / 10, epoch: MPS.epoch, looks: MPS.needLooks });
+      MPS.needLooks = false;
+      if (MPS.fails) mpNote('Connexion rétablie');
+      MPS.fails = 0; $('mpNet').hidden = true;
+      mpApply(d, t0, Date.now());
+    } catch (e) {
+      if (e.status === 410) { MPS.busy = false; return mpStop(e.message + ' Ta sortie continue en solo.'); }
+      if (e.status === 401) { MPS.busy = false; return mpStop('Ta connexion à CycleRush a expiré : reconnecte-toi pour retrouver le groupe.'); }
+      if (e.status === 403) { MPS.busy = false; return mpStop(e.message + ' Ta sortie continue en solo.'); }
+      if (e.status === 409 && e.code === 'mp_not_member') { // retiré après une longue absence : on revient automatiquement
+        try { const d = await mpApi('POST', '/mp/sessions/' + MPS.code + '/join'); if (d.result === 'pending') throw new Error('Ta place n’est plus réservée : l’organisateur doit t’accepter à nouveau.'); MPS.needLooks = true; mpApply(d, t0, Date.now()); mpNote('Tu es revenu dans la session'); }
+        catch (e2) { MPS.busy = false; return mpStop(e2.message); }
+      } else {
+        MPS.fails++; wait = Math.min(10000, 1000 * 2 ** MPS.fails);
+        $('mpNet').textContent = navigator.onLine === false ? 'Hors ligne : la session t’attend, reconnexion dès le retour du réseau…' : 'Connexion perdue, nouvel essai dans ' + Math.round(wait / 1000) + ' s… Ta place dans la session est conservée.';
+        $('mpNet').hidden = false; mpPanel();
+      }
+    }
+    MPS.busy = false;
+    mpSchedule(wait);
+  }
+  const mpKick = () => { if (MPS.on && !MPS.busy) mpSchedule(50); };
+  addEventListener('online', mpKick);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') mpKick(); });
+
+  function mpStart(d) {
+    MPS.on = true; $('mpBox').hidden = false; $('hGroup').hidden = true; $('mpCode').textContent = MPS.code;
+    const sess = d.session || {}, meP = (d.players || []).find(p => p.me);
+    if (sess.mode === 'race' || sess.phase === 'lobby') { S.s = 0; S.road = -1; S.u = 0; S.turn = {}; } // course / salon : tout le monde part de la ligne de départ
+    if (sess.mode === 'race' && sess.phase === 'running' && meP && meP.raceS > 0 && !meP.dnf) { // retour après une déconnexion : on reprend sa place
+      S.s = Math.min(W.length, meP.raceS); if (!S.running) { S.running = true; S.startedAt = new Date().toISOString(); startTracking(); $('bEnd').disabled = false; $('bGo').textContent = 'Pause'; } }
+    // petit écran : panneau replié pendant la sortie, mais ouvert dans le salon d'attente (participants, bouton de départ)
+    if (MPS.min && sess.phase !== 'lobby') { $('mpBox').classList.add('min'); $('mpHead').setAttribute('aria-expanded', 'false'); }
+    mpApply(d, Date.now(), Date.now());
+    mpNote(d.result === 'already' ? 'Tu es dans la session ' + MPS.code : d.result === 'rejoined' ? 'Tu es revenu dans la session ' + MPS.code : 'Session ' + MPS.code + ' rejointe');
+    mpSchedule(400);
+  }
+  function mpStop(msg) {
+    MPS.on = false; clearTimeout(MPS.timer);
+    for (const o of MPS.players.values()) { o.model && o.model.dispose(); o.tag && o.tag.remove(); }
+    MPS.players.clear(); myLane = 0.8; $('hGroup').hidden = false;
+    $('mpList').innerHTML = ''; $('mpLobby').innerHTML = ''; MPS.lobbySig = null; $('race').hidden = true; $('count').hidden = true; $('mpN').textContent = 'terminée'; $('mpNet').hidden = true; $('mpNote').textContent = msg || '';
+    $('mpCopy').hidden = true; $('mpLeave').hidden = true; $('mpEnd').hidden = true;
+    $('mpBox').classList.remove('min');
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch {}
+    setTimeout(() => { if (!MPS.on) $('mpBox').hidden = true; }, 12000);
+  }
+  const raceOn = () => MPS.on && MPS.sess && MPS.sess.mode === 'race';
+  const locked = () => MPS.on && MPS.sess && (MPS.sess.phase === 'lobby' || MPS.sess.phase === 'countdown');
+  function mpPhase(from, to) {
+    const race = MPS.sess.mode === 'race';
+    if (to === 'countdown') mpNote('Départ donné : compte à rebours !');
+    if ((to === 'countdown' || to === 'running') && MPS.min) { $('mpBox').classList.add('min'); $('mpHead').setAttribute('aria-expanded', 'false'); } // petit écran : la route d'abord
+    if (to === 'running' && !race) { mpNote('C’est parti ! La sortie est lancée.'); say(''); if (!S.running) $('bGo').click(); }
+    if (to === 'finished' && race) { mpNote('Course terminée : résultats définitifs.'); if (!$('rres').hidden || MPS.meP && (MPS.meP.finishMs !== null || MPS.meP.dnf)) showResults(); }
+  }
+  // Compte à rebours, départ automatique et bandeau de course (horloge du serveur)
+  function raceTick() {
+    if (!MPS.on || !MPS.sess) { $('race').hidden = true; $('count').hidden = true; return; }
+    const sess = MPS.sess, now = Date.now() + (MPS.offset || 0);
+    if (sess.startAt && (sess.phase === 'countdown' || sess.phase === 'running')) {
+      const rem = sess.startAt - now;
+      if (rem > 0 && rem <= 11000) { $('count').hidden = false; $('countN').textContent = Math.ceil(rem / 1000); }
+      else if (rem <= 0 && rem > -1500 && sess.mode === 'race') { $('count').hidden = false; $('countN').textContent = 'Partez !'; }
+      else $('count').hidden = true;
+      if (rem <= 0 && sess.mode === 'race' && !S.running && !(MPS.meP && MPS.meP.dnf)) { S.running = true; S.paused = false; S.startedAt = new Date().toISOString(); startTracking(); $('bEnd').disabled = false; $('bGo').textContent = 'Pause'; say(''); mpKick(); }
+    } else $('count').hidden = true;
+    if (sess.mode !== 'race' || (sess.phase !== 'running' && sess.phase !== 'finished')) { $('race').hidden = true; return; }
+    const list = (MPS.list || []).filter(p => !p.dnf), me = MPS.meP || {}, n = (MPS.list || []).length;
+    $('race').hidden = false;
+    if (me.dnf) { $('rPos').innerHTML = 'Non classé'; $('rGap').textContent = me.dnf; $('rLeft').textContent = ''; return; }
+    $('rPos').innerHTML = (me.rank || '—') + '<small>/' + n + '</small>';
+    const lead = list[0], left = Math.max(0, sess.raceM - S.s);
+    $('rGap').textContent = me.finishMs !== null && me.finishMs !== undefined ? 'Arrivé en ' + fmtMs(me.finishMs) : me.rank === 1 ? 'En tête' : lead ? (me.gapMs !== null && me.gapMs !== undefined ? '+' + nf(me.gapMs / 1000, 1) + ' s' : '+' + nf(me.gapM || 0) + ' m') + ' sur ' + lead.username : '';
+    $('rLeft').textContent = me.finishMs !== null && me.finishMs !== undefined ? '' : nf(left / 1000, 2) + ' km';
+    if (me.finishMs !== null && me.finishMs !== undefined && !MPS.resShown) { MPS.resShown = true; mpNote('Arrivée ! Temps officiel : ' + fmtMs(me.finishMs)); showResults(); }
+  }
+  async function showResults() {
+    $('rres').hidden = false;
+    try {
+      const d = await mpApi('GET', '/mp/sessions/' + MPS.code + '/results');
+      $('rresSub').textContent = route.name + ' · ' + nf(d.session.raceM / 1000, 1) + ' km · ' + (d.final ? 'classement définitif' : 'classement provisoire : en attente des autres coureurs…');
+      const rows = d.final ? d.results.map(r => ({ me: r.me, place: r.place, username: r.username, time: r.status === 'finished' ? fmtMs(r.finishMs) : 'Non classé', note: r.status === 'finished' ? (r.verified ? (r.bonusCoins ? '+' + r.bonusCoins + ' pièces, +' + r.bonusXp + ' XP' : 'vérifié') : 'non vérifié (sortie non suivie par le serveur)') : '' }))
+        : d.live.map(p => ({ me: p.me, place: p.dnf ? null : p.rank, username: p.username, time: p.finishMs !== null ? fmtMs(p.finishMs) : p.dnf ? 'Non classé' : 'en course (' + nf((d.session.raceM - p.raceS) / 1000, 1) + ' km)', note: p.dnf || '' }));
+      $('rresBody').innerHTML = '<table><thead><tr><th>#</th><th>Coureur</th><th>Temps</th><th></th></tr></thead><tbody>' + rows.map(r => '<tr class="' + (r.me ? 'me' : '') + '"><td>' + (r.place || '—') + '</td><td class="nm"></td><td class="num">' + r.time + '</td><td class="nt"></td></tr>').join('') + '</tbody></table>';
+      [...$('rresBody').querySelectorAll('tbody tr')].forEach((tr, i) => { tr.querySelector('.nm').textContent = rows[i].username; tr.querySelector('.nt').textContent = rows[i].note; });
+      if (!d.final) setTimeout(() => { if (!$('rres').hidden) showResults(); }, 3000);
+    } catch (e) { $('rresBody').textContent = e.message; }
+  }
+  $('rresClose').onclick = () => { $('rres').hidden = true; };
+  function mpPanel() {
+    if (!MPS.on) return;
+    const sess = MPS.sess || {}, race = sess.mode === 'race', ph = sess.phase || 'running';
+    $('mpKind').textContent = race ? 'Course' : 'Sortie';
+    // salon d'attente : participants, départ donné par l'organisateur, demandes d'accès
+    const lb = $('mpLobby');
+    // le salon n'est reconstruit que s'il change (sinon un clic sur un bouton reconstruit à chaque mise à jour serait perdu)
+    const sig = ph + '|' + MPS.host + '|' + (MPS.host ? (MPS.pending || []).map(p => p.id).join(',') : '');
+    if (sig === MPS.lobbySig) {} else if (ph === 'lobby') {
+      MPS.lobbySig = sig;
+      const pend = MPS.host ? MPS.pending || [] : [];
+      lb.innerHTML = '<div class="lobby"><span class="lt"></span>' + (MPS.host ? '<button class="btn primary" id="mpGo"></button>' : '') + pend.map(p => '<div class="pend"><span></span><button class="btn" data-ok="' + p.id + '">Accepter</button><button class="btn" data-no="' + p.id + '">Refuser</button></div>').join('') + '</div>';
+      lb.querySelector('.lt').textContent = (race ? 'Course de ' + nf(sess.raceM / 1000, 1) + ' km · ' : '') + (MPS.host ? 'Tu organises : lance le départ quand tout le monde est là.' : 'En attente du départ donné par l’organisateur…') + ' Accès : ' + (sess.accessLabel || '').toLowerCase() + '.';
+      if (MPS.host) { lb.querySelector('#mpGo').textContent = race ? 'Lancer la course' : 'Lancer la sortie'; [...lb.querySelectorAll('.pend span')].forEach((x, i) => { x.textContent = pend[i].username + ' demande à entrer'; }); }
+    } else { MPS.lobbySig = sig; lb.innerHTML = ph === 'countdown' ? '<div class="lobby">Départ imminent…</div>' : ''; }
+    let all;
+    if (race && ph !== 'lobby') {
+      all = (MPS.list || []).map(p => ({ me: p.me, username: p.username, connected: p.me ? !MPS.fails : p.connected, host: p.host, rank: p.rank,
+        gap: p.me && p.rank === 1 ? 'en tête' : p.finishMs !== null ? fmtMs(p.finishMs) : p.dnf ? '' : p.rank === 1 ? 'en tête' : p.gapMs !== null ? '+' + nf(p.gapMs / 1000, 1) + ' s' : '+' + nf(p.gapM || 0) + ' m',
+        stateLabel: p.dnf ? 'Non classé · ' + p.dnf : p.finishMs !== null ? 'Arrivé' : p.connected ? 'En course' : 'Déconnecté' }));
+    } else {
+    const me0 = { me: true, username: user ? user.username : 'Toi', stateLabel: { waiting: 'En attente', riding: 'En route', paused: 'En pause', finished: 'Arrivé' }[mpState()], connected: !MPS.fails, s: S.s, host: MPS.host };
+    all = [me0, ...[...MPS.players.values()].map(o => ({ username: o.username, stateLabel: o.connected ? o.stateLabel : 'Déconnecté', connected: o.connected, s: o.buf.length ? o.buf[o.buf.length - 1].s : 0, host: o.host }))].sort((a, b) => b.s - a.s);
+    all.forEach(p => { const g = p.s - S.s; p.gap = p.me ? 'toi' : Math.abs(g) < 3 ? 'à ta hauteur' : (g > 0 ? nf(g, 0) + ' m devant' : nf(-g, 0) + ' m derrière'); });
+    }
+    $('mpN').textContent = MPS.fails ? '⚠ hors ligne' : all.length + ' cycliste' + (all.length > 1 ? 's' : '');
+    $('mpList').innerHTML = all.map(p => '<li class="' + (p.me ? 'me' : '') + '"><span class="dot' + (p.connected ? '' : ' off') + '" title="' + (p.connected ? 'Connecté' : 'Déconnecté') + '"></span><span class="nm"></span><span class="gap num"></span><span class="st"></span></li>').join('');
+    [...$('mpList').children].forEach((li, i) => { const p = all[i]; li.querySelector('.nm').textContent = (p.rank ? p.rank + '. ' : '') + p.username + (p.host ? ' ★' : '') + (p.me ? ' (toi)' : ''); li.querySelector('.gap').textContent = p.gap || ''; li.querySelector('.st').textContent = p.stateLabel + (p.connected || p.stateLabel === 'Déconnecté' ? '' : ' · déconnecté'); });
+    $('mpEnd').hidden = !MPS.host;
+  }
+  // Position affichée d'un autre joueur : interpolation entre les positions reçues, avec 1,2 s de retard.
+  // (route principale ou secondaire, position sur cette route)
+  function mpTarget(o) {
+    const b = o.buf; if (!b.length) return null;
+    const rt = Date.now() + (MPS.offset || 0) - MP_DELAY;
+    let k = b.length - 1; while (k > 0 && b[k].t > rt) k--;
+    if (rt <= b[0].t) return { road: b[0].road, pos: b[0].pos };
+    const a = b[k], c = b[k + 1];
+    if (!c || c.road !== a.road) return { road: a.road, pos: a.pos + a.v * Math.min(3, Math.max(0, (rt - a.t) / 1000)) }; // au-delà : on prolonge à vitesse constante (3 s max)
+    const f = (rt - a.t) / Math.max(1, c.t - a.t);
+    return { road: a.road, pos: a.pos + (c.pos - a.pos) * f };
+  }
+  const project = (vp, x, y, z) => { const X = vp[0] * x + vp[4] * y + vp[8] * z + vp[12], Y = vp[1] * x + vp[5] * y + vp[9] * z + vp[13], Wc = vp[3] * x + vp[7] * y + vp[11] * z + vp[15]; if (Wc <= 0.1) return null; return [(X / Wc * 0.5 + 0.5) * innerWidth, (0.5 - Y / Wc * 0.5) * innerHeight]; };
+  let panelAt = 0;
+  function mpDraw(dt, focus, eye, look, fov) {
+    if (!MPS.on) return;
+    const vp = M.mul(M.persp(fov, innerWidth / Math.max(1, innerHeight), 0.25, 3000), M.lookAt(eye, look));
+    for (const o of MPS.players.values()) {
+      const tg = mpTarget(o); if (tg === null) continue;
+      const RD = tg.road >= 0 ? BRS[tg.road].road : W, target = Math.max(0, Math.min(RD.length, tg.pos));
+      if (o.dRoad !== tg.road) { o.dRoad = tg.road; o.ds = null; } // il change de route : on le place directement sur la nouvelle
+      if (o.ds === null || Math.abs(target - o.ds) > 200) o.ds = target; // reprise après rechargement : on replace directement
+      else {
+        const nd = o.ds + (target - o.ds) * Math.min(1, dt * 4);
+        // un cycliste qui roule ne recule jamais à l'écran : petit écart dû au réseau → il « attend » une image au lieu de reculer
+        o.ds = nd < o.ds && o.state === 'riding' && o.ds - target < 15 ? o.ds : nd;
+      }
+      const lane = tg.road >= 0 ? Math.max(-1.1, Math.min(1.1, LANES[o.slot % LANES.length])) * 0.8 : LANES[o.slot % LANES.length];
+      const mainS = tg.road >= 0 ? VVWorld.branchMainS(BRS[tg.road], o.ds) : o.ds, near = Math.abs(mainS - focus) < 900;
+      // pour la vie du parcours (passages à niveau) : position sur la route principale, file et vitesse estimée
+      if (o._mainS !== undefined && dt > 0) o._v = (o._v || 0) * 0.9 + Math.max(0, (mainS - o._mainS) / dt) * 0.1; o._mainS = mainS; o._lane = lane; o._onMain = tg.road < 0;
+      if (o.model && near) o.model.draw(VVWorld.placeOnSmooth(RD, o.ds, lane).m, o.ds / VVRider.WHEEL_R, o.ds / VVRider.WHEEL_R / 2.6 + o.slot);
+      // étiquette avec le nom au-dessus du cycliste
+      if (!o.tag) { o.tag = document.createElement('div'); o.tag.className = 'tag3d'; $('tags').append(o.tag); }
+      const pl = VVWorld.placeOnSmooth(RD, o.ds, lane).p, sp = near && Math.abs(mainS - focus) < 300 ? project(vp, pl.x - Math.sin(pl.heading) * lane, pl.y + 2.3, pl.z + Math.cos(pl.heading) * lane) : null;
+      if (sp && sp[0] > -50 && sp[0] < innerWidth + 50 && sp[1] > 0 && sp[1] < innerHeight) { o.tag.hidden = false; o.tag.style.left = sp[0] + 'px'; o.tag.style.top = sp[1] + 'px'; o.tag.textContent = o.username; o.tag.classList.toggle('off', !o.connected); }
+      else o.tag.hidden = true;
+    }
+    const now = performance.now(); if (now - panelAt > 500) { panelAt = now; mpPanel(); }
+  }
+  // lecture seule, pour les tests automatisés : uniquement ce qui est déjà affiché à l'écran
+  window.__vvMp = () => ({ on: MPS.on, code: MPS.code, lane: myLane, me: { s: S.s, state: mpState() }, others: [...MPS.players.values()].map(o => ({ username: o.username, ds: o.ds, state: o.state, connected: o.connected, slot: o.slot, model: !!o.model })) });
+  $('mpLobby').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return; b.disabled = true;
+    try {
+      if (b.id === 'mpGo') { await mpApi('POST', '/mp/sessions/' + MPS.code + '/start'); mpKick(); }
+      else if (b.dataset.ok) { await mpApi('POST', '/mp/sessions/' + MPS.code + '/players/' + b.dataset.ok + '/approve'); mpKick(); }
+      else if (b.dataset.no) { await mpApi('POST', '/mp/sessions/' + MPS.code + '/players/' + b.dataset.no + '/kick'); mpKick(); }
+    } catch (err) { mpNote(err.message); b.disabled = false; }
+  });
+  $('mpHead').onclick = () => { const min = $('mpBox').classList.toggle('min'); $('mpHead').setAttribute('aria-expanded', min ? 'false' : 'true'); };
+  $('mpCopy').onclick = async () => { try { await navigator.clipboard.writeText(MPS.code); mpNote('Code ' + MPS.code + ' copié'); } catch { mpNote('Copie impossible : le code est ' + MPS.code); } };
+  $('mpLeave').onclick = async () => { const c = MPS.code; mpStop('Tu as quitté la session ' + c + '. Ta sortie continue en solo.'); mpApi('POST', '/mp/sessions/' + c + '/leave').catch(() => {}); };
+  { let armed = 0; $('mpEnd').onclick = async () => {
+    if (Date.now() - armed > 4000) { armed = Date.now(); $('mpEnd').textContent = 'Confirmer la fin ?'; setTimeout(() => { $('mpEnd').textContent = 'Terminer pour tous'; }, 4000); return; }
+    try { await mpApi('POST', '/mp/sessions/' + MPS.code + '/end'); mpStop('Session terminée pour tout le monde. Ta sortie continue en solo.'); } catch (e) { mpNote(e.message); }
+  }; }
+  // Rejoindre la session indiquée dans l'adresse (?session=CODE) : appel idempotent, utile aussi après un rechargement.
+  if (MPS.code) meReady.then(async () => {
+    $('mpBox').hidden = false; $('mpCode').textContent = MPS.code; $('hGroup').hidden = true;
+    if (!user) { $('mpN').textContent = ''; $('mpNote').innerHTML = 'Connecte-toi pour rejoindre la session. <a style="color:#22d3ee" href="./">Se connecter</a>'; $('mpCopy').hidden = $('mpLeave').hidden = true; return; }
+    try {
+      let d = await mpApi('POST', '/mp/sessions/' + MPS.code + '/join');
+      if (d.session.routeId !== route.id) { location.hash = '#' + d.session.routeId; location.reload(); return; }
+      // salon sur acceptation : on attend l'accord de l'organisateur (nouvel essai toutes les 3 s)
+      while (d.result === 'pending') {
+        $('mpKind').textContent = d.session.mode === 'race' ? 'Course' : 'Sortie'; $('mpN').textContent = 'en attente';
+        $('mpNote').textContent = 'Demande envoyée : l’organisateur doit t’accepter. Tu peux patienter ici.';
+        await new Promise(r => setTimeout(r, 3000));
+        d = await mpApi('POST', '/mp/sessions/' + MPS.code + '/join');
+      }
+      MPS.sess = d.session;
+      mpStart(d);
+    } catch (e) { mpStop(e.message + ' Tu peux rouler en solo.'); $('mpBox').hidden = false; }
+  });
+  $('bClose').onclick = () => { $('sum').hidden = true; if (S.done) { S.done = false; } };
+
+  /* ---------- Fin de sortie ---------- */
+  function finish(arrived) {
+    S.paused = true; $('bGo').textContent = 'Reprendre'; mpKick();
+    const P = S.rec.map(r => r.p), n = P.length, avg = n ? P.reduce((a, b) => a + b, 0) / n : 0;
+    const H = S.rec.map(r => r.hr).filter(Boolean);
+    $('sumT').textContent = arrived ? 'Arrivée ! ' + route.name : 'Sortie terminée';
+    $('sumSub').textContent = fmt(S.t) + ' · ' + nf(S.dist / 1000, 2) + ' km parcourus · ' + nf(Math.min(S.s, W.length) / 1000, 1) + ' km sur ' + route.km + ' km de la route principale';
+    $('sumStats').innerHTML = [['Puissance moy.', Math.round(avg) + ' W'], ['Vitesse moy.', nf(S.t ? S.dist / S.t * 3.6 : 0, 1) + ' km/h'], ['Dénivelé', Math.round(S.gain) + ' m'], ['Distance', nf(S.dist / 1000, 2) + ' km'], ['Durée', fmt(S.t)], ['FC moy.', H.length ? Math.round(H.reduce((a, b) => a + b, 0) / H.length) + ' bpm' : '—']].map(([a, b]) => '<div><span>' + a + '</span><b>' + b + '</b></div>').join('');
+    const b = $('bSave'), t = $('saveTxt'); b.hidden = false; b.disabled = false;
+    if (S.saved) { t.textContent = 'Cette sortie est déjà enregistrée.'; b.hidden = true; }
+    else if (!user) { t.innerHTML = 'Connecte-toi pour enregistrer tes sorties. <a href="./" style="color:#22d3ee">Se connecter</a>'; b.hidden = true; }
+    else if (S.t < 60) { t.textContent = 'Roule au moins une minute pour pouvoir enregistrer la sortie.'; b.hidden = true; }
+    else t.textContent = 'Enregistre la sortie dans ton tableau de bord, tes défis et le fil de tes amis.';
+    const sg = SG.done.filter(r => !r.cancelled);
+    // recommencer le dernier segment roulé (après l'enregistrement de cette sortie, ou tout de suite si rien n'est à enregistrer)
+    if (sg.length && !(MPS.on && MPS.sess && MPS.sess.mode === 'race')) { const g = sg[sg.length - 1].seg; S.retryUrl = S.retryUrl || '/ride.html?seg=' + encodeURIComponent(g.id) + '#' + route.id; $('bRetry').hidden = false; $('bRetry').textContent = 'Recommencer depuis le départ (« ' + g.name + ' »)'; }
+    if (sg.length) $('sumStats').innerHTML += sg.map(r => '<div><span>Segment · ' + r.seg.name.replace(/</g, '') + '</span><b>' + fmtMs(r.timeMs) + (r.pr ? ' ★' : '') + '</b></div>').join('');
+    S.summary = { title: route.name, startedAt: S.startedAt, durationS: Math.max(1, Math.round(S.t)), distanceM: Math.round(S.dist), elevationM: Math.round(S.gain), avgPower: Math.round(avg), avgHr: H.length ? Math.round(H.reduce((a, b) => a + b, 0) / H.length) : null, source: 'home-trainer' };
+    $('sum').hidden = false;
+  }
+  $('bSave').onclick = async () => {
+    const b = $('bSave'), t = $('saveTxt'); b.disabled = true;
+    try {
+      if (RS.starting) await RS.starting;
+      if (RS.err) throw new Error(RS.err);
+      if (!RS.id) throw new Error('Cette sortie n’a pas pu être suivie par CycleRush (connexion au serveur), elle ne peut donc pas être enregistrée.');
+      const m = S.summary;
+      const d = await post('/rides/' + RS.id + '/finish', { durationS: Math.floor(S.t), distanceM: Math.floor(S.dist), elevationM: m.elevationM, avgHr: m.avgHr, lastPower: powerSince(), measured: realPower() });
+      S.saved = true; b.hidden = true; clearInterval(RS.timer);
+      const rw = d.rewards, nfx = v => Number(v || 0).toLocaleString('fr-FR');
+      t.textContent = 'Sortie enregistrée' + (rw && (rw.xp || rw.coins) ? ' : +' + nfx(rw.xp) + ' XP' + (rw.bonusXp ? ' (dont ' + nfx(rw.bonusXp) + ' XP de bonus pour avoir terminé le parcours)' : '') + ' et +' + nfx(rw.coins) + ' pièces' + (rw.levelUp ? ', niveau ' + rw.levelUp + ' atteint' + (rw.levelCoins ? ' (+' + rw.levelCoins + ' pièces de niveau)' : '') + ' !' : '.') : '.')
+        + (rw && rw.bonusAlreadyToday ? ' Bonus d’arrivée déjà obtenu aujourd’hui sur ce parcours.' : '') + (rw && rw.capped ? ' Plafond de gains du jour atteint.' : '');
+      const lv = document.createElement('span'); lv.className = 'lvlNow'; t.append(lv);
+      // palier de niveau atteint (10, 20 … 100) : la récompense se choisit sur CycleRush
+      fetch('/api/auth/me', { credentials: 'same-origin' }).then(r => r.json()).then(m => { const R = m.user && m.user.rewards; if (R) lv.textContent = ' Niveau ' + R.level + ' : ' + nfx(R.intoLevel) + ' / ' + nfx(R.levelSpan) + ' XP' + (R.nextMilestone ? ' · palier ' + R.nextMilestone.level + ' dans ' + nfx(R.nextMilestone.remaining) + ' XP' : '') + '.';
+        const p = m.user && m.user.rewards.milestones && m.user.rewards.milestones.pending || []; if (p.length) { const a2 = document.createElement('a'); a2.href = '/boutique'; a2.style.color = '#22d3ee'; a2.textContent = ' Palier du niveau ' + p[0] + ' atteint : choisis ta récompense (vélo ou pièces).'; t.append(a2); } }).catch(() => {});
+    } catch (e) { t.textContent = e.message; b.disabled = false; }
+  };
+
+  /* ---------- Profil en bas d'écran ---------- */
+  function drawProfile() { // profil de la route où l'on roule (principale ou secondaire)
+    const RD = curRoad(), Wd = 1000, Hh = 56, n = RD.n, step = Math.max(1, Math.floor(n / 400)), min = RD.minE, max = Math.max(RD.maxE, min + 40);
+    const y = e => (Hh - 4 - (e - min) / (max - min) * (Hh - 10)).toFixed(1), X = i => (i / (n - 1) * Wd).toFixed(1);
+    const upto = Math.min(n - 1, Math.floor(curPos() / VVWorld.STEP));
+    let all = 'M0 ' + Hh, done = 'M0 ' + Hh;
+    for (let i = 0; i < n; i += step) { all += ' L' + X(i) + ' ' + y(RD.E[i]); if (i <= upto) done += ' L' + X(i) + ' ' + y(RD.E[i]); }
+    all += ' L' + Wd + ' ' + y(RD.E[n - 1]) + ' L' + Wd + ' ' + Hh + ' Z';
+    done += ' L' + X(upto) + ' ' + y(RD.E[upto]) + ' L' + X(upto) + ' ' + Hh + ' Z';
+    const x = X(upto);
+    // segments de la route affichée, de la couleur de leur type (sprint, montée, route secondaire)
+    let sg = '';
+    for (const g of SEGS) if ((g.road < 0 && S.road < 0) || (g.road >= 0 && g.road === S.road)) {
+      const c = VVWorld.SEG_STYLE[g.kind].color, i0 = Math.round(g.sA / VVWorld.STEP), i1 = Math.min(n - 1, Math.round(g.sB / VVWorld.STEP));
+      let d = ''; for (let i = i0; i <= i1; i += Math.max(1, Math.floor((i1 - i0) / 30))) d += (d ? ' L' : 'M') + X(i) + ' ' + y(RD.E[i]);
+      d += ' L' + X(i1) + ' ' + y(RD.E[i1]);
+      sg += '<rect x="' + X(i0) + '" y="0" width="' + Math.max(2, X(i1) - X(i0)) + '" height="' + Hh + '" fill="' + c + '" opacity=".18"/><path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="4" vector-effect="non-scaling-stroke"/>';
+    }
+    $('hProf').innerHTML = '<svg viewBox="0 0 ' + Wd + ' ' + Hh + '" preserveAspectRatio="none"><path d="' + all + '" fill="rgba(34,211,238,.28)" stroke="#22d3ee" stroke-width="1.5"/><path d="' + done + '" fill="rgba(45,212,191,.8)"/>' + sg + '<line x1="' + x + '" x2="' + x + '" y1="0" y2="' + Hh + '" stroke="#fff" stroke-width="3"/></svg>';
+  }
+
+  /* ---------- Ciel, météo et cycle jour / nuit (world/sky.js, world/realwx.js) ----------
+     Par défaut : heure, soleil et météo réels du lieu de la personne (localisation avec son accord, ou ville choisie),
+     données Open-Meteo actualisées toutes les 10 min en arrière-plan. Sans données réelles : météo du jeu, signalée
+     « secours ». Option « Ciel du jeu » : heure et météo calculées à partir de l'heure du serveur (connue grâce au
+     multijoueur, sinon celle de l'appareil), les mêmes pour tous les cyclistes. Réglages enregistrés sur cet appareil. */
+  const WXK = 'vv_wx';
+  const wxOpts = (() => { const d = { source: 'real', cycle: true, dynamic: true, quality: 'high' }; try { return { ...d, ...JSON.parse(localStorage.getItem(WXK) || '{}') }; } catch { return d; } })();
+  const sky = new VVSky.Sky(R, route, W, wxOpts);
+  const gameNow = () => Date.now() + (MPS.offset || 0);
+  const RW = window.VVReal ? VVReal.createProvider() : null; if (RW) sky.setSource(RW);
+  window.__vvReal = () => RW; window.__vvSky = () => sky;
+  const isReal = () => !!RW && wxOpts.source !== 'game';
+  const WXI = { clear: '☀️', cloudy: '☁️', fog: '🌫️', rain: '🌧️', snow: '❄️', storm: '⛈️' };
+  const hourTxt = h => Math.floor(h) + ' h ' + String(Math.floor((h % 1) * 60)).padStart(2, '0');
+  const wxIcon = st => st.k.night > 0.6 && st.w.kind !== 'rain' && st.w.kind !== 'fog' && st.w.kind !== 'snow' && st.w.kind !== 'storm' ? '🌙' : st.k.phase === 'dusk' || st.k.phase === 'dawn' ? '🌅' : WXI[st.w.kind] || '☁️';
+  const tempTxt = t => t === null || t === undefined ? '' : Math.round(t).toLocaleString('fr-FR') + ' °C';
+  const agoTxt = ms => { const m = Math.round(ms / 60000); return m < 1 ? 'à l’instant' : 'il y a ' + (m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0')); };
+  // état affiché : 'real' (données réelles récentes), 'stale' (dernières données réelles), 'fallback' (secours), 'game'
+  function wxState() { if (!isReal()) return { mode: 'game' }; const t = RW.status(gameNow()); return { mode: t.weather === 'real' || t.weather === 'stale' ? t.weather : 'fallback', t }; }
+  function wxUi() {
+    const st = sky.st; if (!st) return; const S2 = wxState(), real = S2.mode === 'real' || S2.mode === 'stale';
+    const temp = real && st.w.temp !== undefined ? tempTxt(st.w.temp) : '', lab = st.w.label || VVSky.LABEL[st.w.kind];
+    const badge = S2.mode === 'game' ? '' : real ? (S2.mode === 'real' ? 'Réel' : 'Réel*') : 'Secours';
+    const t = wxIcon(st) + hourTxt(st.k.hour) + lab + temp + badge; if (t === wxUi.last) return; wxUi.last = t;
+    const el = $('hWx'); el.innerHTML = ''; el.append(wxIcon(st) + ' ' + hourTxt(st.k.hour));
+    const w = document.createElement('span'); w.className = 'wl'; w.textContent = ' · ' + lab + (temp ? ' · ' + temp : ''); el.append(w);
+    if (badge) { const b = document.createElement('i'); b.className = 'src ' + (real ? 'real' : 'alt'); b.textContent = badge; el.append(b); }
+    el.title = (S2.mode === 'game' ? 'Heure du jeu ' : 'Heure locale ') + hourTxt(st.k.hour) + ', ' + lab.toLowerCase() + (temp ? ', ' + temp : '') + (S2.mode === 'real' ? ' — météo réelle' : S2.mode === 'stale' ? ' — dernières données réelles connues' : S2.mode === 'fallback' ? ' — conditions de secours (météo du jeu)' : ' — ciel du jeu') + ' (réglages)';
+  }
+  // lever et coucher du soleil du jour au lieu choisi (même calcul que le soleil du jeu)
+  function sunTimes(ms, L, offMin) {
+    const day0 = ms - (((ms + offMin * 60000) % 86400000) + 86400000) % 86400000; let prev = null, up = null, down = null;
+    for (let m = 0; m <= 1440; m += 2) { const t = day0 + m * 60000, e = VVReal.sunPos(t, L.lat, L.lon).el * 57.2958 + 0.833; if (prev !== null && prev <= 0 && e > 0) up = m; if (prev !== null && prev > 0 && e <= 0) down = m; prev = e; }
+    const f = m => m === null ? '—' : Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0'); return { up: f(up), down: f(down) };
+  }
+  function wxPanel() {
+    $('sReal').checked = isReal(); $('sGame').checked = !isReal(); $('sReal').disabled = !RW;
+    $('oCycle').checked = wxOpts.cycle; $('oWx').checked = wxOpts.dynamic; $('oLow').checked = wxOpts.quality === 'low';
+    $('wxReal').hidden = !isReal(); $('wxGame').hidden = isReal();
+    const st = sky.st, S2 = wxState(), box = $('wxNow'); if (!st) return;
+    const lines = [];
+    if (S2.mode === 'game') { const mins = st.w.nextAt ? Math.max(1, Math.round((st.w.nextAt - gameNow()) / 60000)) : null;
+      lines.push('Il est ' + hourTxt(st.k.hour) + ' (heure du jeu) · ' + VVSky.LABEL[st.w.kind] + (wxOpts.dynamic && mins && st.w.next !== st.w.kind ? ' · ' + VVSky.LABEL[st.w.next].toLowerCase() + ' dans ' + mins + ' min environ' : '') + '.'); box.className = 'wxstate'; }
+    else {
+      const t = S2.t, L = t.loc, k = st.k, d = RW.data, tz = k.tz || RW.tzName(), off = k.offMin || 0, utc = 'UTC' + (off >= 0 ? '+' : '−') + Math.floor(Math.abs(off) / 60) + (Math.abs(off) % 60 ? ':' + String(Math.abs(off) % 60).padStart(2, '0') : '');
+      const sun = sunTimes(gameNow(), L, off);
+      if (S2.mode === 'real' || S2.mode === 'stale') { const w = d.w, wind = RW.wind(gameNow());
+        lines.push((S2.mode === 'real' ? '✅ Météo réelle' : '🕘 Dernières données réelles') + ' à ' + (L.name || 'ton lieu') + ' : ' + w.label.toLowerCase() + ', ' + tempTxt(w.temp) + (wind ? ', vent ' + Math.round(wind.ms * 3.6) + ' km/h du ' + VVReal.cardinal(wind.from) : '') + '.');
+        lines.push('Données Open-Meteo reçues ' + agoTxt(gameNow() - RW.fetchedAt) + (S2.mode === 'stale' ? ' : le service ne répond pas pour le moment' + (t.error ? ' (' + t.error + ')' : '') + '.' : ', actualisées toutes les 10 min.'));
+      } else {
+        lines.push('⚠️ Conditions de secours : météo du jeu (' + (st.w.label || VVSky.LABEL[st.w.kind]).toLowerCase() + ').');
+        lines.push(!t.loc || t.time === 'approx' ? 'Raison : aucun lieu choisi. Utilise ta position ou choisis une ville ci-dessous.' : t.inflight ? 'Raison : données en cours de chargement…' : !t.online ? 'Raison : pas de connexion Internet. Nouvel essai automatique dès le retour de la connexion.' : 'Raison : ' + (t.error || 'données indisponibles') + '. Nouvel essai automatique ' + (t.nextAt > gameNow() ? 'dans ' + Math.max(1, Math.round((t.nextAt - gameNow()) / 60000)) + ' min' : 'en cours') + '.');
+      }
+      lines.push('🕒 Heure locale réelle : ' + hourTxt(k.hour) + ' (' + tz + ', ' + utc + ', changements d’heure compris). Lever du soleil ' + sun.up + ', coucher ' + sun.down + (t.time === 'approx' ? ' (position approximative d’après le fuseau de l’appareil).' : '.'));
+      if (MPS.on) lines.push('Course en ligne : le vent qui agit sur la vitesse reste celui du jeu, le même pour tous les cyclistes.');
+      box.className = 'wxstate ' + (S2.mode === 'real' || S2.mode === 'stale' ? 'real' : 'alt');
+      $('wxLoc').textContent = 'Lieu : ' + (RW.loc ? (RW.loc.kind === 'gps' ? 'ma position (≈ ' + Math.abs(RW.loc.lat).toLocaleString('fr-FR') + '° ' + (RW.loc.lat >= 0 ? 'N' : 'S') + ', ' + Math.abs(RW.loc.lon).toLocaleString('fr-FR') + '° ' + (RW.loc.lon >= 0 ? 'E' : 'O') + ')' : RW.loc.name + (RW.loc.detail ? ' (' + RW.loc.detail + ')' : '')) : 'aucun (position approximative)');
+      $('wxRetry').hidden = !(RW.loc && (S2.mode === 'fallback' || S2.mode === 'stale') && !t.inflight);
+    }
+    box.innerHTML = ''; lines.forEach((l, i) => { if (i) box.append(document.createElement('br')); box.append(l); });
+  }
+  const saveWx = () => { Object.assign(sky.opts, wxOpts); try { localStorage.setItem(WXK, JSON.stringify(wxOpts)); } catch {} wxUi.last = null; wxUi(); wxPanel(); wxAskUi(); };
+  $('hWx').onclick = () => { wxPanel(); $('wxo').hidden = false; $('wxClose').focus(); };
+  for (const [id, f] of [['oCycle', v => { wxOpts.cycle = v; }], ['oWx', v => { wxOpts.dynamic = v; }], ['oLow', v => { wxOpts.quality = v ? 'low' : 'high'; }]])
+    $(id).onchange = e => { f(e.target.checked); saveWx(); };
+  for (const id of ['sReal', 'sGame']) $(id).onchange = () => { wxOpts.source = $('sReal').checked ? 'real' : 'game'; if (RW) RW.setEnabled(wxOpts.source === 'real'); saveWx(); };
+  $('wxClose').onclick = () => { $('wxo').hidden = true; $('hWx').focus(); };
+  // localisation : seulement après un clic, avec l'autorisation du navigateur ; en cas de refus, choix d'une ville
+  async function askGps(errEl) {
+    errEl.textContent = 'Localisation en cours…';
+    try { await RW.useGps(); errEl.textContent = ''; return true; }
+    catch (e) { errEl.textContent = 'Impossible d’utiliser ta position : ' + e.message + '. Tu peux choisir une ville à la place.'; return false; }
+  }
+  $('wxGps').onclick = async () => { const ok = await askGps($('wxCities')); if (!ok) $('wxCity').focus(); wxPanel(); };
+  $('wxRetry').onclick = () => { RW.refresh(true); setTimeout(wxPanel, 50); };
+  let cityCtl = null;
+  async function findCity() {
+    const q = $('wxCity').value.trim(), ul = $('wxCities'); ul.innerHTML = ''; if (q.length < 2) { ul.textContent = 'Écris au moins deux lettres.'; return; }
+    if (cityCtl) cityCtl.abort(); cityCtl = new AbortController(); ul.textContent = 'Recherche…';
+    try { const list = await VVReal.geocode(q, undefined, cityCtl.signal); ul.innerHTML = '';
+      if (!list.length) { ul.textContent = 'Aucune ville trouvée pour « ' + q + ' ».'; return; }
+      for (const c of list) { const li = document.createElement('li'), b = document.createElement('button'); b.type = 'button'; b.append(c.name + ' '); const sm = document.createElement('small'); sm.textContent = c.detail; b.append(sm);
+        b.onclick = () => { RW.setLocation(c); ul.innerHTML = ''; $('wxCity').value = ''; wxPanel(); wxAskUi(); }; li.append(b); ul.append(li); } }
+    catch (e) { if (e.name !== 'AbortError') ul.textContent = 'Recherche impossible : ' + e.message + '.'; }
+  }
+  $('wxFind').onclick = findCity; $('wxCity').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); findCity(); } };
+  function wxAskUi() { $('wxAsk').hidden = !(isReal() && !RW.status().decided) || S.running; } // jamais pendant la sortie : la question revient à la prochaine
+  $('wxAskGps').onclick = async () => { const ok = await askGps($('wxAskErr')); if (ok) wxAskUi(); };
+  $('wxAskCity').onclick = () => { RW.later(); wxAskUi(); wxPanel(); $('wxo').hidden = false; $('wxCity').focus(); };
+  $('wxAskLater').onclick = () => { RW.later(); wxAskUi(); };
+  if (RW) { RW.setEnabled(isReal()); RW.onchange(() => { wxUi.last = null; if (!$('wxo').hidden) wxPanel(); }); setTimeout(wxAskUi, 1500); }
+  // lumières de la nuit : lampadaires proches et phare avant du vélo
+  const LAMPS = VVWorld.lampsOf ? VVWorld.lampsOf(W) : [];
+  const lampGlow = R.mesh((() => { const g = new VV3D.Geo(); g.box(M.t(0, 4.44, 0), 0.44, 0.05, 0.24, '#fff6c8'); return g; })());
+  function nightLights(eye, focus, pos) {
+    const st = sky.st, n = st ? st.night : 0; if (n < 0.04) { R.lights(eye, [], [0, 0, 0]); return; }
+    const near = []; if (LAMPS.length) { const ic = focus / VVWorld.STEP; let lo = 0, hi = LAMPS.length; while (lo < hi) { const m = (lo + hi) >> 1; if (LAMPS[m].i < ic) lo = m + 1; else hi = m; }
+      for (let j = Math.max(0, lo - 14); j < Math.min(LAMPS.length, lo + 14); j++) { const L = LAMPS[j], d = Math.hypot(L.x - eye[0], L.z - eye[2]); if (d < 220) near.push([L.x, L.y + 4.4, L.z, 13.5, d]); } }
+    near.sort((a, b) => a[4] - b[4]); const list = near.slice(0, 7);
+    if (pos && !F.on) { const h = pos.heading; list.push([pos.x + Math.cos(h) * 6.5, pos.y + 0.9, pos.z + Math.sin(h) * 6.5, 9]); } // phare du vélo
+    R.lights(eye, list, [1.05 * n, 0.86 * n, 0.58 * n]); nightLights.list = list;
+  }
+  function drawLampGlow(st) { if (!st || st.night < 0.15 || !nightLights.list) return; for (const L of nightLights.list) if (L[3] > 10) R.drawUnlit(lampGlow, M.t(L[0], L[1] - 4.4, L[2]), [1, 1, 1], 0.3); }
+
+  /* ---------- Segments chronométrés ----------
+     Départ et arrivée sont des positions exactes sur la route (catalogue commun au jeu et au serveur). Le passage au
+     départ puis à l'arrivée est signalé en direct au serveur, qui horodate les deux et vérifie le temps avant de
+     l'enregistrer : un temps n'est valable que pendant une sortie suivie (home trainer), sans pause ni détour. */
+  const SEGS = VVWorld.segmentsOf(W);
+  const SG = { pr: {}, active: null, result: null, resultAt: 0, done: [] };
+  const fmtMs = v => { const t = Math.max(0, Math.round(v / 100)) / 10, m = Math.floor(t / 60), x = t - m * 60; return m + ':' + (x < 10 ? '0' : '') + x.toFixed(1).replace('.', ','); };
+  const segLoad = () => { if (user) fetch('/api/segments?route=' + route.id, { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).then(d => { if (d) for (const x of d.items) SG.pr[x.id] = { mine: x.mine, leader: x.leader }; }).catch(() => {}); };
+  meReady.then(segLoad);
+  const segPost = (body) => post('/rides/' + RS.id + '/segment', body);
+  // instant réel (chrono S.wt) où la ligne a été franchie pendant la dernière image : « dist » mètres avant la position actuelle
+  const wCross = dist => S.wt - Math.min(frame.rdt || 0, Math.max(0, dist) / Math.max(0.1, S.v) * ((frame.rdt || 0) / Math.max(1e-3, frame.gdt || 0)));
+  // un temps ne compte que si l'on est parti de la ligne de départ du parcours (distance réellement roulée)
+  const segFrom = g => g.road < 0 ? g.sA : g.mainA;
+  function segStart(seg, tCross, pos) {
+    if (SG.active) return;
+    if (S.dist < segFrom(seg) - 150) { SG.result = { seg, cancelled: 'pour être chronométré, il faut partir de la ligne de départ du parcours' }; SG.resultAt = performance.now(); return; }
+    SG.active = { seg, t0: tCross, pw: [], sent: null }; SG.result = null;
+    if (RS.id && user) SG.active.sent = segPost({ segmentId: seg.id, phase: 'start', elapsedMs: Math.round(tCross * 1000), road: seg.road, pos, rideM: Math.floor(S.dist) }).then(() => true).catch(e => { if (SG.active) SG.active.err = e.message; return false; });
+  }
+  function segCancel(why) { if (!SG.active) return; SG.result = { seg: SG.active.seg, cancelled: why }; SG.resultAt = performance.now(); SG.active = null; }
+  async function segEnd(tCross, pos) {
+    const a = SG.active; if (!a) return; SG.active = null;
+    const r = { seg: a.seg, timeMs: Math.round((tCross - a.t0) * 1000), pending: true }; SG.result = r; SG.resultAt = performance.now(); SG.done.push(r);
+    const pw = a.pw.length ? Math.round(a.pw.reduce((x, y) => x + y, 0) / a.pw.length) : 0;
+    if (!a.sent) { r.pending = false; r.local = true; return; }
+    if (!(await a.sent)) { r.pending = false; r.err = a.err || 'le départ n’a pas pu être enregistré'; return; }
+    try {
+      const d = await segPost({ segmentId: a.seg.id, phase: 'end', elapsedMs: Math.round(tCross * 1000), road: a.seg.road, pos, avgPower: pw });
+      Object.assign(r, { pending: false, saved: true, timeMs: d.timeMs, pr: d.pr, first: d.first, prev: d.previousBestMs, rank: d.rank });
+      if (d.pr) SG.pr[a.seg.id] = { ...(SG.pr[a.seg.id] || {}), mine: { timeMs: d.timeMs } };
+    } catch (e) { r.pending = false; r.err = e.message; }
+    SG.resultAt = performance.now();
+  }
+  // détection pendant le déplacement (appelée à chaque image où l'on avance)
+  function segDetect(prevS, prevRoad, prevU) {
+    if (MPS.on && MPS.sess && MPS.sess.mode === 'race') return; // pendant une course : le classement de la course suffit
+    const a = SG.active;
+    if (a && a.seg.road < 0 && S.road >= 0) segCancel('tu as quitté la route du segment');
+    if (S.road < 0) {
+      for (const g of SEGS) if (g.road < 0) {
+        if (!SG.active && prevRoad < 0 && prevS < g.sA && S.s >= g.sA) segStart(g, wCross(S.s - g.sA), S.s);
+        else if (SG.active && SG.active.seg === g && prevS < g.sB && S.s >= g.sB) segEnd(wCross(S.s - g.sB), S.s);
+      }
+    }
+  }
+  const segBranchEnter = b => { const g = SEGS.find(x => x.road === b.id); if (g) segStart(g, wCross(S.u), S.u); };
+  const segBranchLeave = b => { if (SG.active && SG.active.seg.road === b.id) segEnd(wCross(S.u - b.len), b.len); };
+  function segUi(now) {
+    const box = $('seg'), a = SG.active;
+    const pr = id => SG.pr[id] && SG.pr[id].mine ? SG.pr[id].mine.timeMs : null;
+    if (a) {
+      const g = a.seg, done = g.road < 0 ? S.s - g.sA : S.u, el = (S.wt - a.t0) * 1000, p = pr(g.id);
+      a.pw.push(S.power);
+      let cmp = '';
+      if (p && done > 50) { const d = el - p * Math.min(1, done / g.len); cmp = '<span class="' + (d <= 0 ? 'up' : 'down') + '">' + (d <= 0 ? '▲ ' : '▼ ') + (d <= 0 ? '−' : '+') + nf(Math.abs(d) / 1000, 1) + ' s sur ton record</span>'; }
+      box.innerHTML = '<div class="sn"></div><div class="st num">' + fmtMs(el) + '</div><div class="sd">' + nf(Math.max(0, g.len - done) / 1000, 2) + ' km restants ' + cmp + '</div>';
+      box.querySelector('.sn').textContent = 'Segment · ' + g.name; box.hidden = false; return;
+    }
+    const r = SG.result;
+    if (r && now - SG.resultAt < 14000) {
+      let h = '<div class="sn"></div>';
+      if (r.cancelled) h += '<div class="sd">Tentative annulée : ' + r.cancelled + '.</div>';
+      else {
+        h += '<div class="st num">' + fmtMs(r.timeMs) + '</div>';
+        if (r.pending) h += '<div class="sd">Vérification par le serveur…</div>';
+        else if (r.local) h += '<div class="sd">Temps non enregistré : ' + (user ? 'la sortie n’est pas suivie par CycleRush' : 'connecte-toi pour enregistrer tes temps') + '.</div>';
+        else if (r.err) h += '<div class="sd down"></div>';
+        else h += (r.pr ? '<span class="pr">' + (r.first ? 'Premier temps sur ce segment !' : 'Nouveau record personnel ! −' + nf((r.prev - r.timeMs) / 1000, 1) + ' s') + '</span>' : '<div class="sd">+' + nf((r.timeMs - r.prev) / 1000, 1) + ' s sur ton record (' + fmtMs(r.prev) + ')</div>') + '<div class="sd">' + r.rank + (r.rank === 1 ? 'er' : 'e') + ' du classement</div>';
+        h += '<div class="acts"><button class="btn" data-sg="retry">Recommencer depuis le départ</button><a class="btn" href="./#seg-' + encodeURIComponent(r.seg.id) + '" target="_blank" rel="noopener">Classement</a></div>';
+      }
+      box.innerHTML = h; box.querySelector('.sn').textContent = 'Segment · ' + r.seg.name; const e = box.querySelector('.sd.down'); if (e) e.textContent = r.err; box.hidden = false; return;
+    }
+    // segment qui approche (route principale, ou route secondaire choisie à l'embranchement)
+    const ahead = S.road < 0 ? SEGS.find(g => (g.road < 0 && g.sA > S.s && g.sA - S.s < 400) || (g.road >= 0 && S.turn[g.road] && BRS[g.road].sA > S.s && BRS[g.road].sA - S.s < 400)) : null;
+    if (ahead && S.running && !(MPS.on && MPS.sess && MPS.sess.mode === 'race')) {
+      const dist = (ahead.road < 0 ? ahead.sA : BRS[ahead.road].sA) - S.s, p = pr(ahead.id), L = SG.pr[ahead.id] && SG.pr[ahead.id].leader;
+      box.innerHTML = '<div class="sn"></div><div class="sd"></div>';
+      box.querySelector('.sn').textContent = 'Segment dans ' + Math.round(dist) + ' m · ' + ahead.name;
+      box.querySelector('.sd').textContent = nf(ahead.len / 1000, 2) + ' km · ' + (ahead.grade >= 0 ? '' : '−') + nf(Math.abs(ahead.grade), 1) + ' %' + (p ? ' · ton record ' + fmtMs(p) : '') + (L ? ' · meilleur temps ' + fmtMs(L.timeMs) + ' (' + L.username + ')' : '');
+      box.hidden = false; return;
+    }
+    box.hidden = true;
+  }
+  // même adresse que la page actuelle (on recommence le segment déjà choisi) : seul le « # » ne recharge pas la page
+  const goUrl = u => { const x = new URL(u, location.href); if (x.pathname === location.pathname && x.search === location.search) { location.hash = x.hash; location.reload(); } else location.href = x.href; };
+  $('seg').addEventListener('click', e => {
+    if (!e.target.closest('[data-sg="retry"]') || !SG.result) return;
+    const id = SG.result.seg.id, url = '/ride.html?seg=' + encodeURIComponent(id) + '#' + route.id;
+    if (user && S.usedTrainer && !S.saved && S.t >= 60) { S.retryUrl = url; finish(false); $('bRetry').hidden = false; $('saveTxt').textContent = 'Enregistre d’abord cette sortie (pièces, XP et temps), puis repars de la ligne de départ du parcours.'; }
+    else goUrl(url);
+  });
+  $('bRetry').onclick = () => {
+    if (!S.retryUrl) return;
+    // sortie pas encore enregistrée : on prévient d'abord (second clic = repartir sans l'enregistrer)
+    if (!S.saved && !$('bSave').hidden && !$('bRetry').dataset.sure) { $('bRetry').dataset.sure = '1'; $('saveTxt').textContent = 'Cette sortie n’est pas encore enregistrée : enregistre-la d’abord, ou clique à nouveau sur « Recommencer » pour repartir sans l’enregistrer.'; return; }
+    goUrl(S.retryUrl);
+  };
+  // segment visé (?seg=…) : on part toujours de la ligne de départ du parcours ; seule une indication est affichée
+  meReady.then(() => {
+    const id = new URLSearchParams(location.search).get('seg'), g = SEGS.find(x => x.id === id);
+    if (!g || MPS.code || S.running) return;
+    if (g.road >= 0) S.turn[g.road] = true; // route secondaire : l'embranchement est déjà choisi
+    say('Segment « ' + g.name + ' » : il commence au km ' + nf(segFrom(g) / 1000, 1) + (g.road >= 0 ? ' (route secondaire, embranchement déjà choisi)' : '') + '. Pars de la ligne de départ du parcours : le chrono démarrera tout seul.');
+  });
+
+  /* ---------- Bandeau du haut : jamais recouvert par le panneau de droite (pente, météo, vent) ni par celui de gauche ----------
+     Il est centré tant qu'il y a la place ; sinon il se place dans l'espace libre entre les deux panneaux, puis se resserre. */
+  function fitHud() {
+    const top = document.querySelector('.hud.top'), sl = document.querySelector('.hud.slope'), pw = document.querySelector('.hud.pw'); if (!top || !sl || !pw) return;
+    if (innerWidth <= 640) { top.classList.remove('tight'); top.style.left = ''; top.style.transform = ''; for (const id of ['hGroup', 'mpBox']) { const e = document.getElementById(id); if (e) e.style.top = ''; } return; } // téléphone : disposition propre (feuille de style)
+    top.classList.remove('tight'); top.style.left = ''; top.style.transform = '';
+    const place = () => { const a = pw.getBoundingClientRect(), b = sl.getBoundingClientRect(), t = top.getBoundingClientRect(), lo = a.right + 8, hi = b.left - 8;
+      if (t.left >= lo && t.right <= hi) return true;
+      if (hi - lo >= t.width) { top.style.left = Math.round((lo + hi) / 2 - t.width / 2) + 'px'; top.style.transform = 'none'; return true; } return false; };
+    // panneaux de droite placés sous le panneau pente / météo / vent, quelle que soit sa hauteur
+    const below = Math.round(sl.getBoundingClientRect().bottom + 8) + 'px'; for (const id of ['hGroup', 'mpBox']) { const e = document.getElementById(id); if (e) e.style.top = below; }
+    if (place()) return; top.classList.add('tight'); top.style.left = ''; top.style.transform = ''; place();
+  }
+  addEventListener('resize', fitHud); setInterval(fitHud, 1500); requestAnimationFrame(fitHud);
+
+  /* ---------- Vue cockpit : cintre, potence et compteur (repère du vélo : x vers l'avant, y vers le haut, z vers la droite) ---------- */
+  // regard légèrement baissé (6°) : la route reste bien visible et le compteur apparaît au-dessus du profil, en bas de l'image
+  const COCK = { eye: [-0.02, 1.22, 0], look: [20, -0.88, 0], C: [0.66, 0.95, 0], W: 0.046, H: 0.064 };
+  { const dx = COCK.eye[0] - COCK.C[0], dy = COCK.eye[1] - COCK.C[1], L = Math.hypot(dx, dy); COCK.n = [dx / L, dy / L, 0]; COCK.u = [COCK.n[1], -COCK.n[0], 0]; if (COCK.u[1] < 0) COCK.u = COCK.u.map(v => -v); }
+  // Inclinaison du regard calculée pour que le compteur tombe au-dessus des panneaux du bas : vers 72 % de la hauteur
+  // sur un écran large, 58 % sur un téléphone en hauteur (les commandes y occupent le bas de l'écran).
+  function cockLook() {
+    const yT = innerHeight > innerWidth * 1.2 ? 0.58 : 0.72, aC = Math.atan2(COCK.eye[1] - COCK.C[1], COCK.C[0] - COCK.eye[0]);
+    const pitch = Math.max(0.03, aC - Math.atan((2 * yT - 1) * Math.tan(1.1 / 2)));
+    return [COCK.eye[0] + Math.cos(pitch) * 20, COCK.eye[1] - Math.sin(pitch) * 20, 0];
+  }
+  let cockKey = '', cockM = null;
+  function cockpitMesh() {
+    const b = (me && me.cfg && me.cfg.bike) || {}, key = (b.tapeColor || '') + (b.frameColor || '');
+    if (cockM && key === cockKey) return cockM;
+    const G = new VV3D.Geo(), dark = '#15181d', tape = b.tapeColor || '#111827', fr = b.frameColor || dark, M3 = VV3D.M;
+    G.tube([0.34, 0.83, 0], [0.47, 0.866, 0], 0.017, fr, 6); G.box(M3.t(0.47, 0.866, 0), 0.05, 0.045, 0.045, dark);
+    G.tube([0.47, 0.866, -0.21], [0.47, 0.866, 0.21], 0.0135, tape, 8);
+    for (const sd of [-1, 1]) { const pts = [[0.47, 0.866, sd * 0.21], [0.54, 0.846, sd * 0.21], [0.57, 0.786, sd * 0.215], [0.54, 0.726, sd * 0.22], [0.47, 0.716, sd * 0.22]];
+      for (let i = 0; i < pts.length - 1; i++) G.tube(pts[i], pts[i + 1], 0.0135, tape, 6); G.box(M3.t(0.535, 0.885, sd * 0.21), 0.06, 0.045, 0.034, dark); }
+    // support avancé et compteur (boîtier sombre, écran tourné vers le cycliste)
+    const { C, n, u } = COCK; G.tube([0.47, 0.88, 0], [C[0] - n[0] * 0.012 - 0.01, C[1] - n[1] * 0.012 - 0.02, 0], 0.008, dark, 5);
+    const m = [u[0], u[1], 0, 0, n[0], n[1], 0, 0, 0, 0, 1, 0, C[0] - n[0] * 0.008, C[1] - n[1] * 0.008, 0, 1];
+    G.box(m, COCK.H + 0.016, 0.014, COCK.W + 0.012, '#1b1f26'); G.box(M3.chain(m, M3.t(0, 0.0072, 0)), COCK.H + 0.004, 0.001, COCK.W + 0.002, '#0b1220');
+    cockKey = key; if (cockM) R.free(cockM); cockM = R.mesh(G); return cockM;
+  }
+  // Homographie : rectangle (0,0)-(w,h) → quadrilatère projeté (CSS matrix3d) ; l'écran suit exactement le compteur 3D.
+  function rectToQuad(w, h, q) {
+    const [x0, y0] = q[0], [x1, y1] = q[1], [x2, y2] = q[2], [x3, y3] = q[3];
+    const dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2, sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3, den = dx1 * dy2 - dx2 * dy1; if (Math.abs(den) < 1e-9) return null;
+    const g = (sx * dy2 - dx2 * sy) / den, hh = (dx1 * sy - sx * dy1) / den;
+    const a = x1 - x0 + g * x1, b = x3 - x0 + hh * x3, c = x0, d = y1 - y0 + g * y1, e = y3 - y0 + hh * y3, f = y0;
+    return [a / w, d / w, 0, g / w, b / h, e / h, 0, hh / h, 0, 0, 1, 0, c, f, 0, 1];
+  }
+  function compUi(on, m, eye, look, now) {
+    const el = $('bikeComp');
+    if (!on) { if (el.style.display !== 'none') el.style.display = 'none'; return; }
+    const vp = M.mul(M.persp(1.1, innerWidth / Math.max(1, innerHeight), 0.25, 3000), M.lookAt(eye, look)), { C, n, u, W: CW, H: CH } = COCK, o = 0.0075;
+    const P = (a, b) => { const lp = [C[0] + u[0] * a + n[0] * o, C[1] + u[1] * a + n[1] * o, b]; const wp = VV3D.M.apply(m, lp); return project(vp, wp[0], wp[1], wp[2]); };
+    const q = [P(CH / 2, -CW / 2), P(CH / 2, CW / 2), P(-CH / 2, CW / 2), P(-CH / 2, -CW / 2)];
+    const mm = q.every(Boolean) && rectToQuad(220, 300, q);
+    if (!mm) { el.style.display = 'none'; return; }
+    el.style.transform = 'matrix3d(' + mm.map(v => +v.toFixed(6)).join(',') + ')'; if (el.style.display !== 'block') el.style.display = 'block';
+    if (now - (compUi.at || 0) > 250) { compUi.at = now; $('bcV').textContent = nf(S.v * 3.6, 1); $('bcP').textContent = Math.round(S.power); $('bcD').textContent = nf(S.dist / 1000, 2); $('bcT').textContent = fmt(S.t).replace(/^0:/, ''); }
+  }
+  // Vent : flèche orientée par rapport au cycliste (vers le haut = vent dans le dos), vitesse et effet ressenti
+  function windUi(h) {
+    const w = life.wind, rel = w.dir - h, kmh = Math.round(w.ms * 3.6), hw = life.headwind(h);
+    $('hWind').querySelector('i').style.transform = 'rotate(' + (-(rel) * 180 / Math.PI + 90).toFixed(0) + 'deg)';
+    $('hWindV').textContent = kmh + ' km/h';
+    const lab = hw > 0.6 ? 'de face' : hw < -0.6 ? 'de dos' : 'de côté';
+    $('hWindL').textContent = ' ' + lab; $('hWind').title = 'Vent ' + kmh + ' km/h, ' + lab + (Math.abs(hw) > 0.3 ? ' : ' + (hw > 0 ? 'il te freine un peu' : 'il te pousse un peu') : '');
+  }
+
+  /* ---------- Boucle principale ---------- */
+  const ZC = ['#7d93a9', '#3a8dde', '#36c28a', '#f1c540', '#f2874a', '#e5484d'], ZN = ['Récup', 'Endurance', 'Tempo', 'Seuil', 'VO2max', 'Anaérobie'];
+  const zoneOf = p => { const r = p / S.ftp; return r < .55 ? 0 : r < .75 ? 1 : r < .9 ? 2 : r < 1.05 ? 3 : r < 1.2 ? 4 : 5; };
+  let last = performance.now(), acc = 0, profAt = 0, simP = 0;
+  S.usedTrainer = false;
+  // Résolution adaptative : si l'appareil n'arrive plus à afficher assez d'images par seconde, le jeu calcule moins de
+  // pixels (jusqu'à 55 % de la résolution), puis remonte dès qu'il y a de la marge. Mode économie : 75 % au plus.
+  const PERF = { n: 0, t0: 0, s: 1, lowFor: 0 };
+  function perfTick(now, rdt) {
+    if (rdt > 0.5) { PERF.n = 0; PERF.t0 = now; return; } // onglet masqué ou pause : mesure ignorée
+    if (!PERF.t0) PERF.t0 = now; PERF.n++;
+    const span = now - PERF.t0; if (span < 2000) return;
+    const fps = PERF.n * 1000 / span, dpr = Math.min(window.devicePixelRatio || 1, 2), min = Math.max(0.55, 0.75 / dpr), max = wxOpts.quality === 'low' ? Math.max(min, 0.75) : 1;
+    if (fps < 42) PERF.s = Math.max(min, PERF.s - (fps < 28 ? 0.2 : 0.1));
+    else if (fps > 56) PERF.s = Math.min(max, PERF.s + 0.05);
+    PERF.s = Math.min(PERF.s, max); R.scale = PERF.s; PERF.fps = fps; PERF.n = 0; PERF.t0 = now;
+  }
+  window.__vvScene = () => scene;
+  window.__vvPerf = () => ({ ...PERF, cull: scene.lastCull, draws: scene.chunks.size });
+  function frame(now) {
+    const rdt = (now - last) / 1000, dt = Math.min(0.1, rdt); last = now; perfTick(now, rdt);
+    const moving = S.running && !S.paused;
+    // chrono réel (horloge de l'appareil, hors pauses) pour les segments : il doit correspondre à l'horloge du serveur,
+    // même si un appareil lent affiche peu d'images par seconde (le temps de jeu, lui, est plafonné à 0,1 s par image)
+    S.wt = (S.wt || 0) + (moving ? rdt : 0); frame.rdt = moving ? rdt : 0; frame.gdt = moving ? dt : 0;
+    // puissance : home trainer, ou essai au clavier
+    if (realPower()) {
+      if (now - lastPush > 250) { lastPush = now; pushPower(SX.value('power') || 0); }
+      if (moving) S.usedTrainer = true;
+    } else { simP += ((moving && canTest() ? S.test : 0) - simP) * Math.min(1, dt * 2); if (Math.random() < dt * 8) pushPower(simP < 1 ? 0 : simP + (Math.random() - 0.5) * 10); S.cad = moving && S.test > 0 ? 88 : 0; }
+    const cd = SX.value('cadence'); if (cd !== null) S.cad = cd;
+    S.hr = Math.round(SX.value('hr') || 0);
+    S.power = avgP(3);
+    const pos = VVWorld.at(curRoad(), curPos());
+    // vent : léger effet de face ou de dos sur la vitesse (même modèle de résistance de l'air)
+    const head = life && !F.on ? life.headwind(pos.heading) : 0; S.head = head;
+    const p1 = avgP(1), vt = moving && p1 >= 10 ? VVWorld.speedForWind(p1, pos.grade, S.kg + 9, head) : 0;
+    S.v += (Math.min(vt, 22) - S.v) * Math.min(1, dt / 2.5);
+    if (moving) {
+      const e0 = pos.y, adv = S.v * dt; S.t += dt; S.dist += adv;
+      const prevS = S.s, prevRoad = S.road, prevU = S.u;
+      if (S.road < 0) { // route principale : à l'embranchement choisi, on bascule sur la route secondaire
+        const prev = S.s; S.s = Math.min(W.length, S.s + adv);
+        const b = BRS.find(x => prev < x.sA && S.s >= x.sA && S.turn[x.id]);
+        if (b) { const from = VVWorld.placeOnSmooth(W, S.s, laneMain()).p; S.road = b.id; S.u = S.s - b.sA; S.s = VVWorld.branchMainS(b, S.u); keepLane(from); say(''); jxUi(); if (!(MPS.on && MPS.sess && MPS.sess.mode === 'race')) segBranchEnter(b); }
+      } else { // route secondaire : au bout, retour sur la route principale (plus loin que l'embranchement)
+        const b = BRS[S.road]; S.u += adv;
+        if (S.u >= b.len) { segBranchLeave(b); const from = VVWorld.placeOnSmooth(b.road, b.len, laneBranch()).p; S.road = -1; S.s = Math.min(W.length, b.sB + (S.u - b.len)); S.u = 0; S.lastBr = b; delete S.turn[b.id]; keepLane(from); jxUi(); }
+        else S.s = VVWorld.branchMainS(b, S.u);
+      }
+      segDetect(prevS, prevRoad, prevU);
+      const e1 = VVWorld.at(curRoad(), curPos()).y; if (e1 > e0) S.gain += e1 - e0;
+      acc += dt; if (acc >= 1) { acc -= 1; S.rec.push({ p: Math.round(avgP(1)), hr: S.hr || 0 }); }
+      // home trainer piloté : la pente envoyée inclut l'équivalent du vent (résistance de l'air en plus ou en moins), plafonné à ±1,5 %
+      const windG = head ? Math.max(-0.01, Math.min(0.015, 0.5 * 1.2 * 0.32 * ((S.v + head) * Math.abs(S.v + head) - S.v * S.v) / ((S.kg + 9) * 9.81))) : 0, gSend = pos.grade + windG;
+      if (SX.hasControl() && (lastGrade === null || Math.abs(gSend - lastGrade) > 0.004) && now - lastGradeAt > 1500) { SX.setGrade(gSend); lastGrade = gSend; lastGradeAt = now; }
+      if (S.road < 0 && S.s >= W.length && !S.done) { S.done = true; finish(true); }
+    }
+    // bots : puissance constante, même physique
+    for (const b of bots) { if (moving || b.s > 8) { const q = VVWorld.at(W, b.s), g = q.grade; const bv = VVWorld.speedForWind(b.w, g, 82, life ? life.headwind(q.heading) : 0); b.v += (bv - b.v) * Math.min(1, dt / 2.5); if (moving) b.s = Math.min(W.length - 1, b.s + b.v * dt); } }
+
+    const fly = F.on ? flyStep(dt, now) : null, focus = fly ? F.near : S.s;
+    if (now - (frame.ambAt || 0) > 250) { frame.ambAt = now; amb.setSpeed(fly ? 3 : S.v); if (amb.setAltitude) { const q = VVWorld.at(curRoad(), curPos()); amb.setAltitude((q.y - W.minE) / Math.max(1, W.maxE - W.minE)); } } // hauteur dans le parcours (montagne : vent et oiseaux)
+    // son spatial : position de la personne (le cycliste, ou la caméra en vol libre) 10 fois par seconde
+    if (life) {
+      const riders = [{ s: S.s, off: (S.road >= 0 ? laneBranch() : laneMain()) + S.laneOff, v: S.v, main: S.road < 0 }];
+      if (!MPS.on) for (const b of bots) riders.push({ s: b.s, off: b.off, v: b.v, main: true });
+      else for (const o of MPS.players.values()) if (o._mainS !== undefined && o.connected !== false) riders.push({ s: o._mainS, off: o._lane, v: o._v || 0, main: o._onMain });
+      // vent réel en sortie solo ; en multijoueur, vent du jeu (le même pour tous : il agit sur la vitesse)
+      if (life.setRealWind) life.setRealWind(isReal() && !MPS.on ? RW.wind(gameNow()) : null);
+      const st0 = MPS.on ? (() => { const w = VVSky.weatherAt(route.theme, route.seed, gameNow(), wxOpts.source === 'game' ? wxOpts : { dynamic: true }); return { rn: w.rain, cl: w.cloud, k: sky.st ? sky.st.k : { night: 0 } }; })() : sky.st; life.update(Math.min(0.1, rdt), { focus, riders, t: gameNow() / 1000, traffic: !MPS.on, /* même vent pour tous les joueurs d'une course : heure du jeu synchronisée */ weather: st0 ? { rain: st0.rn, cloud: st0.cl, night: st0.k.night } : {} });
+    }
+    if (now - (frame.lisAt || 0) > 100) { frame.lisAt = now; const me0 = fly ? { x: F.x, y: F.y, z: F.z, heading: F.yaw } : (() => { const q = VVWorld.at(curRoad(), curPos()); return { x: q.x, y: q.y + 1.4, z: q.z, heading: q.heading }; })(); amb.listen(me0, life ? scene.soundSources().concat(life.soundSources(me0)) : scene.soundSources()); if (life && amb.setWind) amb.setWind(life.wind.ms); }
+    scene.update(focus, 1600, fly ? 1000 : 300);
+    S.laneOff *= Math.exp(-dt / 1.2); // changement de route : le cycliste rejoint sa file en douceur
+    const lane = (S.road >= 0 ? laneBranch() : laneMain()) + S.laneOff;
+    const pl = VVWorld.placeOnSmooth(curRoad(), curPos(), lane), p = pl.p, hx = Math.cos(p.heading), hz = Math.sin(p.heading), nx = -hz, nz = hx;
+    let eye, look;
+    // point derrière le cycliste (sur la route secondaire, puis sur la route principale avant l'embranchement ou après le retour) ;
+    // avant la ligne de départ, on prolonge la route en ligne droite
+    const behind = d => {
+      if (S.road >= 0) { const b = BRS[S.road], k = S.u - d; return k >= 0 ? VVWorld.atSmooth(b.road, k) : VVWorld.atSmooth(W, Math.max(0, b.sA + k)); }
+      if (S.lastBr && S.s >= S.lastBr.sB && S.s - S.lastBr.sB < d) return VVWorld.atSmooth(S.lastBr.road, Math.max(0, S.lastBr.len - (d - (S.s - S.lastBr.sB))));
+      const k = S.s - d, q = VVWorld.atSmooth(W, Math.max(0, k)); if (k >= 0) return q; const e = -k; return { x: q.x - Math.cos(q.heading) * e, y: q.y, z: q.z - Math.sin(q.heading) * e }; };
+    const ML = lane;
+    if (fly) { eye = fly.eye; look = fly.look; }
+    else if (S.cam === 'cockpit') { eye = VV3D.M.apply(pl.m, COCK.eye); look = VV3D.M.apply(pl.m, cockLook()); } // tête au-dessus du guidon : on voit le cintre et le compteur en bas de l'image
+    else if (S.cam === 'drone') { const b = behind(25); eye = [b.x + nx * 14, b.y + 16, b.z + nz * 14]; look = [p.x + hx * 15, p.y, p.z + hz * 15]; }
+    else { const b = behind(6.5); eye = [b.x + nx * ML, b.y + 2.4, b.z + nz * ML]; look = [p.x + hx * 8 + nx * ML, p.y + 1.1, p.z + hz * 8 + nz * ML]; }
+    // la caméra ne passe jamais sous le relief (talus, montagne, falaise) : elle monte tout de suite, redescend en douceur
+    // Hauteur du relief prise exactement sous la caméra, à sa position sur la route (distance et décalage latéral connus),
+    // et non plus au point du tracé le plus proche cherché de 20 m en 20 m : ce point changeait d'un coup en avançant,
+    // le sol « trouvé » sautait de plusieurs dizaines de cm et la caméra remontait par à-coups (≈ 400 fois en 10 min).
+    if (!fly && S.cam !== 'cockpit') {
+      let gy = -Infinity;
+      if (S.road < 0 && !(S.lastBr && S.s - S.lastBr.sB < 25)) gy = S.cam === 'drone' ? VVWorld.debug.groundDrawn(route.theme, W, Math.max(0, S.s - 25), 14) : VVWorld.debug.groundDrawn(route.theme, W, Math.max(0, S.s - 6.5), ML);
+      else if (S.cam === 'drone') gy = VVWorld.debug.terrainAt(W, eye[0], eye[2], Math.round(S.s / VVWorld.STEP)).y; // route secondaire : ancien calcul (vue drone seulement)
+      const need = Math.max(0, gy + (S.cam === 'drone' ? 2.5 : 2.3) - eye[1]); // poursuite : 2,4 m au-dessus de la route, aucune correction sur la route elle-même
+      S.lift = Math.max(need, (S.lift || 0) - dt * 3); eye[1] += S.lift; }
+    const gNow = gameNow(); sky.update(gNow, eye); // ciel, lumière et brouillard du moment
+    nightLights(eye, focus, p); // la nuit : lampadaires proches et phare du vélo
+    const fovNow = fly ? 1.05 : S.cam === 'cockpit' ? 1.1 : 0.95;
+    R.begin(M.lookAt(eye, look), fovNow);
+    scene.grassOn = wxOpts.quality !== 'low'; // herbe dense : désactivée en mode économie
+    scene.draw(eye, look, fovNow, innerWidth / Math.max(1, innerHeight)); // tronçons hors du champ de vision non dessinés drawLampGlow(sky.st);
+    if (life) { const st1 = sky.st; life.draw(eye, { night: st1 ? st1.k.night : 0, weather: st1 ? { rain: st1.rn, cloud: st1.cl } : {}, dt: Math.min(0.1, rdt) }); }
+    const cockOn = !fly && S.cam === 'cockpit';
+    if (cockOn) R.draw(cockpitMesh(), pl.m); // guidon et compteur (vue cockpit seulement)
+    const wheel = S.dist / VVRider.WHEEL_R, crank = S.dist / VVRider.WHEEL_R / 2.6;
+    if (fly || S.cam !== 'cockpit') me.draw(pl.m, wheel, crank);
+    if (!MPS.on) for (const b of bots) { if (Math.abs(b.s - focus) < 900) b.model.draw(VVWorld.placeOnSmooth(W, b.s, b.off).m, b.s / VVRider.WHEEL_R, b.s / VVRider.WHEEL_R / 2.6 + 1); }
+    mpDraw(dt, focus, eye, look, fly ? 1.05 : S.cam === 'cockpit' ? 1.1 : 0.95);
+    compUi(cockOn, pl.m, eye, look, now); // écran du compteur : visible seulement en vue cockpit, même image que la caméra
+    if (life && now - (frame.windAt || 0) > 400) { frame.windAt = now; windUi(p.heading); }
+    // arche d'arrivée de la course (quand elle est plus courte que le parcours)
+    if (MPS.on && MPS.sess && MPS.sess.mode === 'race' && MPS.sess.raceM && MPS.sess.raceM < W.length - 50 && Math.abs(MPS.sess.raceM - S.s) < 1500 && S.road < 0) {
+      if (!MPS.arch || MPS.archAt !== MPS.sess.raceM) { MPS.arch = VVWorld.finishArch(R, W, MPS.sess.raceM); MPS.archAt = MPS.sess.raceM; }
+      R.draw(MPS.arch);
+    }
+    sky.draw(eye, gNow); // ciel, nuages et pluie après le décor (le décor proche masque déjà le ciel)
+    if (now - (frame.wxAt || 0) > 500) { frame.wxAt = now; wxUi(); if (S.running && !$('wxAsk').hidden) $('wxAsk').hidden = true; if (RW && isReal()) RW.tick(); const st = sky.st; if (st && amb.setWeather) amb.setWeather({ rain: st.rn, cloud: st.cl, night: st.k.night, glow: st.k.glow }); }
+    if (now - (frame.segAt || 0) > 200) { frame.segAt = now; segUi(now); raceTick(); }
+
+    // HUD
+    const z = zoneOf(S.power);
+    $('hPow').innerHTML = Math.round(S.power) + '<small>W</small>';
+    $('hZone').textContent = 'Z' + (z + 1) + ' · ' + ZN[z]; $('hZone').style.background = ZC[z];
+    $('hWkg').textContent = nf(S.power / S.kg, 1); $('hCad').textContent = S.cad ? Math.round(S.cad) : '—'; $('hHr').textContent = S.hr || '—';
+    $('hSpd').textContent = nf(S.v * 3.6, 1); $('hDist').textContent = nf(S.dist / 1000, 2); $('hGain').textContent = Math.round(S.gain); $('hTime').textContent = fmt(S.t);
+    $('hSlope').textContent = (p.grade >= 0 ? '' : '−') + nf(Math.abs(p.grade * 100), 1) + ' %'; $('hAlt').textContent = 'Altitude ' + Math.round(p.y) + ' m';
+    $('hLeft').textContent = S.road >= 0 ? nf(Math.max(0, BRS[S.road].len - S.u) / 1000, 1) + ' km avant de rejoindre la route principale' : MPS.on && MPS.sess && MPS.sess.mode === 'race' && MPS.sess.raceM && S.s < MPS.sess.raceM ? nf(Math.max(0, MPS.sess.raceM - S.s) / 1000, 1) + ' km avant l’arrivée de la course' : nf(Math.max(0, W.length - S.s) / 1000, 1) + ' km avant l’arrivée';
+    if (now - (frame.jxAt || 0) > 300) { frame.jxAt = now; jxUi(); }
+    if (!MPS.on) $('hBots').innerHTML = bots.map(b => { const d = b.s - S.s; return '<div><span>' + b.name + '</span><span class="num">' + (Math.abs(d) < 1 ? 'à ta hauteur' : (d > 0 ? nf(d, 0) + ' m devant' : nf(-d, 0) + ' m derrière')) + '</span></div>'; }).join('');
+    if (now - profAt > 1000) { profAt = now; drawProfile(); }
+    requestAnimationFrame(frame);
+  }
+  // Écran de chargement : on prépare le décor autour du départ, le profil du cycliste, puis on lance l'affichage.
+  async function boot() {
+    const t0 = performance.now(), next = () => new Promise(r => requestAnimationFrame(r));
+    loadStep(10, 'Tracé du parcours et du relief');
+    await next();
+    loadStep(20, 'Construction des paysages');
+    let total = 0;
+    for (let k = 0, tb = performance.now(); k < 600 && performance.now() - tb < 25000; k++) { const n = scene.update(0); total += n; loadStep(Math.min(80, 20 + total * 4)); await next(); if (!n && !(scene.busy && scene.busy())) break; }
+    loadStep(85, 'Préparation de ton cycliste et de ton vélo');
+    await Promise.race([meReady.catch(() => {}), new Promise(r => setTimeout(r, 2500))]);
+    // parcours désactivé par l'équipe : les joueurs ne peuvent pas le lancer (le serveur refuse aussi la sortie) ;
+    // l'équipe peut l'essayer, sans enregistrement
+    const st = await Promise.race([statusReady, new Promise(r => setTimeout(() => r(null), 3000))]);
+    if (st && st.enabled === false) {
+      if (!canTest()) { $('load').hidden = true; $('offTxt').textContent = `${route.name} est temporairement désactivé par l’équipe de CycleRush.${st.reason ? ' ' + st.reason : ''} Tes sorties et ton historique sur ce parcours sont conservés.`; $('off').hidden = false; return; }
+      say(`Parcours désactivé pour les joueurs : essai de l’équipe, cette sortie ne sera pas enregistrée.`);
+    }
+    drawProfile();
+    loadStep(100, 'C’est parti !');
+    const wait = 1400 - (performance.now() - t0); if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    requestAnimationFrame(frame);
+    await next(); await next();
+    $('load').classList.add('out');
+    setTimeout(() => { $('load').hidden = true; }, 600);
+    T.loaded(performance.now() - pageT0);
+  }
+  boot().catch(e => { T.report('load', 'Chargement de la carte interrompu : ' + e.message, { stack: String(e.stack || '') }, 'critical'); $('load').hidden = true; $('errTxt').textContent = 'Le chargement du parcours a échoué.'; $('err').hidden = false; });
+
+})();
+</script>
+</body>
+</html>
